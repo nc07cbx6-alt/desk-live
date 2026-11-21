@@ -59,6 +59,21 @@
   /* graph */
   #graphWrap{padding:4px;}
   #graph{display:block; width:100%; height:360px;}
+  #graphStage{position:relative;}
+  #cosmosDiv{position:absolute; inset:0; display:none; z-index:1;}
+  #cosmosDiv canvas{display:block;}
+  #graphLabels{position:absolute; inset:0; overflow:hidden; pointer-events:none; display:none; z-index:2;}
+  .glabel{position:absolute; left:0; top:0; will-change:transform;}
+  .glabel .gtext{position:absolute; left:0; top:0; text-align:center;}
+  .glabel .gsym{font-family:var(--mono); font-weight:700; font-size:9px; line-height:1.25; white-space:nowrap; text-shadow:0 1px 3px #000, 0 0 6px rgba(0,0,0,.85);}
+  .glabel .gpx{font-family:var(--mono); font-size:8.5px; color:#cbd5e1; line-height:1.3; white-space:nowrap; text-shadow:0 1px 3px #000;}
+  .glabel .gpill{display:inline-block; margin-top:1px; padding:0 5px; border-radius:3px; font-size:8px; font-weight:800; letter-spacing:.06em; white-space:nowrap;}
+  .glabel.long .gpill{background:var(--grn); color:#052e12; box-shadow:0 0 9px var(--grn);}
+  .glabel.short .gpill{background:var(--red); color:#fff; box-shadow:0 0 9px var(--red);}
+  .glabel .gring{position:absolute; left:0; top:0; border-radius:50%; border:1.6px solid var(--cyn); transform:translate(-50%,-50%); animation:gring 1.6s ease-out infinite;}
+  .glabel .gring.d2{animation-delay:.8s;}
+  @keyframes gring{0%{opacity:.8; scale:.7;}100%{opacity:0; scale:1.2;}}
+  .glabel.tickflash .gsym{color:#fff !important; text-shadow:0 0 10px #fff, 0 0 4px #fff;}
   .legend{display:flex; gap:12px; font-size:10px; color:var(--mut); padding:2px 4px 4px; flex-wrap:wrap;}
   .legend i{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; vertical-align:middle;}
 
@@ -138,7 +153,11 @@
 
 <div class="panel" id="graphWrap">
   <div class="ptitle"><span>CRAWLER NETWORK — 銘柄ネットワーク</span><span class="r">ノード色=判定 / 大きさ=スコア / 点滅=ティック受信</span></div>
-  <canvas id="graph"></canvas>
+  <div id="graphStage">
+    <canvas id="graph"></canvas>
+    <div id="cosmosDiv"></div>
+    <div id="graphLabels"></div>
+  </div>
   <div class="legend">
     <span><i style="background:var(--grn)"></i>BUY</span>
     <span><i style="background:var(--red)"></i>SHORT</span>
@@ -595,6 +614,7 @@ function sizeGraph(){
 }
 function drawGraph(now){
   requestAnimationFrame(drawGraph);
+  if(window.__useCosmos) return; // cosmos.gl 有効時はフォールバック描画を止める（コード自体は温存）
   sizeGraph();
   const dpr = window.devicePixelRatio || 1;
   const W = gcv.clientWidth, H = gcv.clientHeight;
@@ -665,6 +685,229 @@ function drawGraph(now){
 }
 requestAnimationFrame(drawGraph);
 
+/* =============== network graph — cosmos.gl (Cosmograph) ============ */
+/* GitHub Pages 上の実ブラウザでは CDN の ES モジュールが読めるため、
+   cosmos.gl v3.6.0（固定版）で描画する。読み込み失敗・WebGL2 不可・
+   初期化失敗のいずれでも、上のカスタム canvas グラフ（フォールバック）が
+   そのまま動き続ける。成功した時だけ canvas を隠して切り替える。 */
+const COSMOS_CDN = 'https://cdn.jsdelivr.net/npm/@cosmos.gl/graph@3.6.0/+esm';
+let cosmosGraph = null;        // Graph instance / 'loading' / null
+let cosmosMode = false;
+let cosmosCount = 0;
+let cosmosSizes = [];
+let cosmosMeta = [];
+let cosmosLastTry = 0;
+const cosmosLabelEls = {};     // index -> {root, text, px}
+const cosmosIdxBySym = {};     // sym -> index
+window.__graphMode = 'fallback';
+
+function rgba(hex, a){
+  const n = parseInt(hex.slice(1), 16);
+  return [((n>>16)&255)/255, ((n>>8)&255)/255, (n&255)/255, a];
+}
+function decColor(c, bright){
+  if(!c) return bright ? '#94a3b8' : '#64748b';
+  if(c.decision === 'BUY')   return bright ? '#4ade80' : '#22c55e';
+  if(c.decision === 'SHORT') return bright ? '#f87171' : '#ef4444';
+  return bright ? '#94a3b8' : '#64748b';
+}
+function cosmosBuildArrays(){
+  const syms = S.universe;
+  const n = syms.length + 1; // [0] = CORE
+  const C = 2048, R = 660;
+  const positions = new Float32Array(n*2);
+  positions[0] = C; positions[1] = C;
+  syms.forEach((sym,i)=>{
+    const a = i/syms.length*Math.PI*2 - Math.PI/2;
+    positions[(i+1)*2]   = C + Math.cos(a)*R;
+    positions[(i+1)*2+1] = C + Math.sin(a)*R*0.94;
+  });
+  const colors = new Float32Array(n*4), sizes = new Float32Array(n);
+  const strokes = new Float32Array(n*4), strokeW = new Float32Array(n);
+  colors.set(rgba('#38bdf8', 1), 0); sizes[0] = 30;
+  strokes.set(rgba('#e0f2fe', 1), 0); strokeW[0] = 2;
+  const links = new Float32Array(syms.length*2);
+  const linkColors = new Float32Array(syms.length*4);
+  const linkWidths = new Float32Array(syms.length);
+  const meta = [{sym:null, core:true, held:false, side:null}];
+  const sizeArr = [30];
+  syms.forEach((sym,i)=>{
+    const idx = i+1, c = candBySym[sym];
+    const score = c ? Math.max(c.chief_score||0, c.chief_short||0) : 0.3;
+    const held = !!(c && c.held);
+    let side = null;
+    if(held && S.portfolio && S.portfolio.positions){
+      const p = S.portfolio.positions.find(pp => pp.symbol === sym);
+      side = p ? p.side : null;
+    }
+    colors.set(rgba(decColor(c, held), 1), idx*4);
+    const sz = (15 + score*26) * (held ? 1.35 : 1);   // 大きさ = スコア強度（保有中はさらに拡大）
+    sizes[idx] = sz; sizeArr[idx] = sz;
+    strokes.set(rgba(held ? '#38bdf8' : '#05070a', 1), idx*4);
+    strokeW[idx] = held ? 3.5 : 1.5;
+    links[i*2] = 0; links[i*2+1] = idx;
+    linkColors.set(rgba('#38bdf8', 0.4), i*4);
+    // 線の太さ = 板の不均衡（将来スナップショットが orderbook を含めば優先）。
+    // 現行スナップショットには無いため、±1% 板厚 depth_usd（対数）で代替する。
+    let w = 1;
+    if(c && c.orderbook && c.orderbook.imbalance != null) w = 0.6 + Math.min(1, Math.abs(c.orderbook.imbalance))*3.2;
+    else if(c && c.exit_impact && c.exit_impact.depth_usd > 0) w = 0.7 + Math.min(3.2, Math.log10(c.exit_impact.depth_usd)/2.2);
+    linkWidths[i] = w;
+    meta[idx] = {sym:sym, core:false, held:held, side:side};
+  });
+  return {n:n, positions:positions, colors:colors, sizes:sizes, strokes:strokes, strokeW:strokeW,
+          links:links, linkColors:linkColors, linkWidths:linkWidths, meta:meta, sizeArr:sizeArr};
+}
+function cosmosBuildLabels(){
+  const wrap = document.getElementById('graphLabels');
+  wrap.innerHTML = '';
+  for(const k in cosmosLabelEls) delete cosmosLabelEls[k];
+  cosmosMeta.forEach((m, idx)=>{
+    const el = document.createElement('div');
+    el.className = 'glabel' + (m.held ? ' held ' + (m.side === 'short' ? 'short' : 'long') : '');
+    let inner = '';
+    if(m.held) inner += '<div class="gring"></div><div class="gring d2"></div>';
+    if(m.core){
+      inner += '<div class="gtext"><div class="gsym" style="color:#bae6fd;">CORE</div></div>';
+    }else{
+      inner += '<div class="gtext"><div class="gsym" style="color:' + decColor(candBySym[m.sym], m.held) + ';">' + esc(m.sym) + '</div>' +
+        '<div class="gpx">–</div>' + (m.held ? '<div><span class="gpill">保有中</span></div>' : '') + '</div>';
+    }
+    el.innerHTML = inner;
+    wrap.appendChild(el);
+    const text = el.querySelector('.gtext');
+    const r = cosmosSizes[idx]/2;
+    text.style.transform = m.core ? 'translate(-50%,-50%)' : 'translate(-50%,' + (r + 3).toFixed(1) + 'px)';
+    if(m.held){
+      el.querySelectorAll('.gring').forEach(rg => { rg.style.width = (2*r + 18) + 'px'; rg.style.height = (2*r + 18) + 'px'; });
+    }
+    cosmosLabelEls[idx] = {root:el, text:text, px:el.querySelector('.gpx')};
+  });
+}
+function cosmosApplyData(first){
+  if(!cosmosGraph || cosmosGraph === 'loading' || !S) return;
+  const d = cosmosBuildArrays();
+  const countChanged = d.n !== cosmosCount;
+  try{
+    if(first || countChanged) cosmosGraph.setPointPositions(d.positions, true);
+    cosmosGraph.setPointColors(d.colors);
+    cosmosGraph.setPointSizes(d.sizes);
+    cosmosGraph.setPointStrokeColors(d.strokes);
+    cosmosGraph.setPointStrokeWidths(d.strokeW);
+    cosmosGraph.setLinks(d.links);
+    cosmosGraph.setLinkColors(d.linkColors);
+    cosmosGraph.setLinkWidths(d.linkWidths);
+    cosmosGraph.render();
+  }catch(e){ console.warn('cosmos data update failed', e); return; }
+  cosmosCount = d.n; cosmosSizes = d.sizeArr; cosmosMeta = d.meta;
+  for(const k in cosmosIdxBySym) delete cosmosIdxBySym[k];
+  d.meta.forEach((m,i)=>{ if(m.sym) cosmosIdxBySym[m.sym] = i; });
+  try{
+    cosmosGraph.setPinnedPoints([0]);
+    cosmosGraph.trackPointPositionsByIndices(d.meta.map((_,i)=>i));
+  }catch(e){ /* tracking is label-only; ignore */ }
+  cosmosBuildLabels();
+  if(first || countChanged){
+    try{ cosmosGraph.fitView(); }catch(e){}
+    // ラベル（特に下端の保有中ピル）がパネルに収まるよう、フィット後に少しだけ引く
+    setTimeout(()=>{ if(cosmosMode && cosmosGraph && cosmosGraph !== 'loading'){ try{ cosmosGraph.setZoomLevel(cosmosGraph.getZoomLevel()*0.85, 600); }catch(e){} } }, 1600);
+  }
+}
+function cosmosLabelLoop(){
+  if(!cosmosMode) return;
+  requestAnimationFrame(cosmosLabelLoop);
+  if(!cosmosGraph || cosmosGraph === 'loading') return;
+  let map = null;
+  try{ map = cosmosGraph.getTrackedPointPositionsMap(); }catch(e){ return; }
+  if(!map || !map.size) return;
+  map.forEach((pos, idx)=>{
+    const L = cosmosLabelEls[idx];
+    if(!L) return;
+    const sp = cosmosGraph.spaceToScreenPosition(pos);
+    L.root.style.transform = 'translate(' + sp[0].toFixed(1) + 'px,' + sp[1].toFixed(1) + 'px)';
+    const m = cosmosMeta[idx];
+    if(m && !m.core && L.px){
+      const px = livePx(m.sym, candBySym[m.sym] ? candBySym[m.sym].price_usd : null);
+      const t = px != null ? '$' + fmtPx(px) : '–';
+      if(L.px.textContent !== t) L.px.textContent = t;
+    }
+  });
+}
+function cosmosFlashLabel(sym){
+  const idx = cosmosIdxBySym[sym];
+  const L = idx != null ? cosmosLabelEls[idx] : null;
+  if(!L) return;
+  L.root.classList.add('tickflash');
+  clearTimeout(L._ft);
+  L._ft = setTimeout(()=>L.root.classList.remove('tickflash'), 320);
+}
+function cosmosBreathing(){
+  // 力のバランスを周期的にずらし、シミュレーションが完全には静止しないようにする
+  let hi = false;
+  setInterval(()=>{
+    if(!cosmosMode || !cosmosGraph || cosmosGraph === 'loading') return;
+    hi = !hi;
+    try{ cosmosGraph.setConfigPartial({simulationGravity: hi ? 0.13 : 0.05, simulationRepulsion: hi ? 1.10 : 0.85}); }catch(e){}
+  }, 3600);
+}
+async function cosmosInit(){
+  if(cosmosGraph || !S) return;
+  cosmosGraph = 'loading';
+  cosmosLastTry = Date.now();
+  try{
+    const probe = document.createElement('canvas');
+    if(!probe.getContext('webgl2')) throw new Error('WebGL2 unavailable');
+    const mod = await Promise.race([
+      import(COSMOS_CDN),
+      new Promise((_, rej)=>setTimeout(()=>rej(new Error('cosmos CDN timeout')), 15000))
+    ]);
+    if(!mod || !mod.Graph) throw new Error('cosmos Graph export missing');
+    const div = document.getElementById('cosmosDiv');
+    div.style.display = 'block';
+    const g = new mod.Graph(div, {
+      backgroundColor: '#0b0f14',
+      scalePointsOnZoom: false,
+      simulationGravity: 0.08,
+      simulationRepulsion: 0.95,
+      simulationLinkSpring: 1.15,
+      simulationLinkDistance: 620,
+      simulationFriction: 0.8,
+      simulationDecay: 100000,
+      fitViewOnInit: false,
+      curvedLinks: false,
+      linkDefaultArrows: false,
+      enableZoom: true,
+      enableDrag: true
+    });
+    cosmosGraph = g;
+    window.__cosmosGraph = g;
+    await g.ready;
+    cosmosApplyData(true);
+    document.getElementById('graph').style.visibility = 'hidden';
+    document.getElementById('graphLabels').style.display = 'block';
+    cosmosMode = true;
+    window.__useCosmos = true;
+    window.__graphMode = 'cosmos';
+    requestAnimationFrame(cosmosLabelLoop);
+    cosmosBreathing();
+    console.info('cosmos.gl graph active');
+  }catch(e){
+    console.warn('cosmos.gl unavailable — canvas fallback stays active:', e);
+    cosmosGraph = null; cosmosMode = false;
+    window.__graphMode = 'fallback';
+    const div = document.getElementById('cosmosDiv');
+    if(div) div.style.display = 'none';
+  }
+}
+function cosmosOnState(){
+  if(!S) return;
+  if(!cosmosGraph){
+    if(Date.now() - cosmosLastTry > 300000) cosmosInit(); // 失敗時は5分に1回だけ再試行
+  }else if(cosmosMode){
+    cosmosApplyData(false);
+  }
+}
+
 /* ============================ state loading ======================== */
 function applyState(ns, live){
   const changed = lastGenAt !== null && ns.generated_at_jst !== lastGenAt;
@@ -679,6 +922,7 @@ function applyState(ns, live){
     document.querySelectorAll('.panel').forEach(el => { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); });
   }
   wsSubscribe();
+  cosmosOnState();
 }
 async function fetchState(){
   try{
@@ -736,6 +980,7 @@ function connectWS(){
           const sym = symByPair[d.symbol];
           if(sym){
             flashes[sym] = performance.now();
+            if(cosmosMode) cosmosFlashLabel(sym);
             tickTape(sym);
           }
         }
@@ -761,7 +1006,10 @@ function wsSubscribe(){
   }catch(e){ console.warn('ws subscribe failed', e); }
 }
 
-window.addEventListener('resize', ()=>{ drawEquity(); });
+window.addEventListener('resize', ()=>{
+  drawEquity();
+  if(cosmosMode && cosmosGraph && cosmosGraph !== 'loading'){ try{ cosmosGraph.fitView(); }catch(e){} }
+});
 init();
 </script>
 </body>
