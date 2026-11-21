@@ -57,12 +57,32 @@
   .step.on{color:#052e12; background:var(--grn); border-color:var(--grn); box-shadow:0 0 10px rgba(34,197,94,.45);}
 
   /* graph */
-  #graphWrap{padding:4px;}
+  #graphWrap{padding:4px; border-color:rgba(56,189,248,.42); box-shadow:0 0 16px rgba(56,189,248,.16), 0 0 42px rgba(217,70,239,.07), inset 0 0 30px rgba(56,189,248,.05);}
+  #graphWrap .ptitle.ghead>span:first-child{color:#7dd3fc; text-shadow:0 0 9px rgba(56,189,248,.6);}
+  #graphWrap .ptitle.ghead{display:block;}
+  #graphWrap .ghead2{display:flex; justify-content:space-between; align-items:baseline; gap:6px 10px; flex-wrap:wrap; margin-top:3px;}
+  #graphWrap .ghead2 .gcap{letter-spacing:0; font-weight:400; font-size:9.5px; color:var(--mut); text-align:right;}
   #graph{display:block; width:100%; height:360px;}
-  #graphStage{position:relative;}
-  #cosmosDiv{position:absolute; inset:0; display:none; z-index:1;}
+  #graphStage{position:relative; overflow:hidden; border-radius:4px;}
+  #cosmosDiv{position:absolute; inset:0; display:none; z-index:1; transform-origin:50% 50%;}
   #cosmosDiv canvas{display:block;}
-  #graphLabels{position:absolute; inset:0; overflow:hidden; pointer-events:none; display:none; z-index:2;}
+  #graphLabels{position:absolute; inset:0; overflow:hidden; pointer-events:none; display:none; z-index:3; transform-origin:50% 50%;}
+  /* HUD dressing (cyberpunk) */
+  .hudfx{position:absolute; inset:0; z-index:2; pointer-events:none;
+    background-image:linear-gradient(rgba(56,189,248,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,.05) 1px, transparent 1px);
+    background-size:28px 28px;}
+  .hudfx .radar{position:absolute; left:50%; top:50%; width:200%; max-width:780px; aspect-ratio:1; transform:translate(-50%,-50%); border-radius:50%; border:1px solid rgba(56,189,248,.07);}
+  .hudfx .radar i{position:absolute; inset:0; border-radius:50%; background:conic-gradient(from 0deg at 50% 50%, rgba(56,189,248,.15) 0deg, rgba(56,189,248,.04) 42deg, transparent 84deg); animation:radarspin 10s linear infinite;}
+  @keyframes radarspin{to{transform:rotate(360deg);}}
+  .scanfx{position:absolute; inset:0; z-index:5; pointer-events:none; background:repeating-linear-gradient(0deg, rgba(160,220,255,.028) 0 1px, transparent 1px 3px);}
+  .hcorner{position:absolute; width:16px; height:16px; z-index:4; pointer-events:none; border:0 solid rgba(56,189,248,.9); filter:drop-shadow(0 0 4px rgba(56,189,248,.75));}
+  .hcorner.tl{left:4px; top:4px; border-left-width:2px; border-top-width:2px;}
+  .hcorner.tr{right:4px; top:4px; border-right-width:2px; border-top-width:2px;}
+  .hcorner.bl{left:4px; bottom:4px; border-left-width:2px; border-bottom-width:2px;}
+  .hcorner.br{right:4px; bottom:4px; border-right-width:2px; border-bottom-width:2px;}
+  /* glossy sphere nodes (cosmos mode) */
+  .gsphere{position:absolute; left:0; top:0; border-radius:50%; transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center; pointer-events:none; will-change:transform,filter;}
+  .gsphere span{font-family:var(--mono); font-weight:800; color:#fff; letter-spacing:.02em; text-shadow:0 1px 2px rgba(0,0,0,.65), 0 0 6px rgba(0,0,0,.35); white-space:nowrap;}
   .glabel{position:absolute; left:0; top:0; will-change:transform;}
   .glabel .gtext{position:absolute; left:0; top:0; text-align:center;}
   .glabel .gsym{font-family:var(--mono); font-weight:700; font-size:9px; line-height:1.25; white-space:nowrap; text-shadow:0 1px 3px #000, 0 0 6px rgba(0,0,0,.85);}
@@ -75,6 +95,8 @@
   .glabel .gring.once{animation:gring .9s ease-out 1 forwards;}
   @keyframes gring{0%{opacity:.8; scale:.7;}100%{opacity:0; scale:1.2;}}
   .glabel.tickflash .gsym{color:#fff !important; text-shadow:0 0 10px #fff, 0 0 4px #fff;}
+  .glabel.tickflash .gsphere span{color:#fff !important; text-shadow:0 0 10px #fff, 0 0 4px #fff;}
+  .glabel.tickflash .gsphere{outline:2px solid rgba(255,255,255,.85); outline-offset:1px;}
   .legend{display:flex; gap:12px; font-size:10px; color:var(--mut); padding:2px 4px 4px; flex-wrap:wrap;}
   .legend i{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; vertical-align:middle;}
 
@@ -153,11 +175,14 @@
 <div id="steps"></div>
 
 <div class="panel" id="graphWrap">
-  <div class="ptitle"><span>CRAWLER NETWORK — 銘柄ネットワーク</span><span class="r"><span id="graphCount" style="font-family:var(--mono); color:var(--txt);"></span> ノード色=判定 / 大きさ=スコア / 点滅=ティック受信</span></div>
+  <div class="ptitle ghead"><span>CRAWLER NETWORK — 銘柄ネットワーク</span><div class="ghead2"><span id="graphCount" style="font-family:var(--mono); color:var(--txt);"></span><span class="gcap">ノード色=判定 / 大きさ=スコア / 点滅=ティック受信</span></div></div>
   <div id="graphStage">
     <canvas id="graph"></canvas>
     <div id="cosmosDiv"></div>
+    <div class="hudfx"><div class="radar"><i></i></div></div>
     <div id="graphLabels"></div>
+    <span class="hcorner tl"></span><span class="hcorner tr"></span><span class="hcorner bl"></span><span class="hcorner br"></span>
+    <div class="scanfx"></div>
   </div>
   <div class="legend">
     <span><i style="background:var(--grn)"></i>BUY</span>
@@ -706,6 +731,10 @@ let cosmosMeta = [];
 let cosmosLastTry = 0;
 const cosmosLabelEls = {};     // index -> {root, text, px}
 const cosmosIdxBySym = {};     // sym -> index
+const cosmosSphereD = [];      // index -> 球スフィアの直径(px, 画面上)
+const cosmosPhase = [];        // index -> 奥行き振動の位相
+const cosmosRate = [];         // index -> 奥行き振動の速さ
+let cosmosTiltEls = null;      // 3D ティルトを掛けるレイヤー [cosmosDiv, graphLabels]
 window.__graphMode = 'fallback';
 
 /* ---- growth / web state ---- */
@@ -720,6 +749,18 @@ let cosmosSignature = null;    // ユニバース署名（変わった時だけ�
 function rgba(hex, a){
   const n = parseInt(hex.slice(1), 16);
   return [((n>>16)&255)/255, ((n>>8)&255)/255, (n&255)/255, a];
+}
+function shade(hex, f){ // f: -1..1（負=黒方向 / 正=白方向へ寄せる）
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n>>16)&255, g = (n>>8)&255, b = n&255;
+  if(f >= 0){ r += (255-r)*f; g += (255-g)*f; b += (255-b)*f; }
+  else { r *= (1+f); g *= (1+f); b *= (1+f); }
+  return 'rgb(' + Math.round(r) + ',' + Math.round(g) + ',' + Math.round(b) + ')';
+}
+function cosmosPanelFactor(){ // パネル幅に応じたスフィア拡縮（モバイルで巨大化させない）
+  const st = document.getElementById('graphStage');
+  const w = st ? (st.clientWidth || 360) : 360;
+  return Math.max(0.78, Math.min(1, w/900));
 }
 function decColor(c, bright){
   if(!c) return bright ? '#94a3b8' : '#64748b';
@@ -736,8 +777,10 @@ function cosmosBuildArrays(){
   for(let i=1;i<n;i++){ positions[i*2] = NaN; positions[i*2+1] = NaN; }
   const colors = new Float32Array(n*4), sizes = new Float32Array(n);
   const strokes = new Float32Array(n*4), strokeW = new Float32Array(n);
-  colors.set(rgba('#38bdf8', 1), 0); sizes[0] = 30;
-  strokes.set(rgba('#e0f2fe', 1), 0); strokeW[0] = 2;
+  // cosmos 自身の点は透明化し、見た目は HTML スフィアが担う。ただしサイズは
+  // 物理（衝突力）のために元の強度サイズを保持する（小さくするとウェブが潰れる）。
+  colors.set(rgba('#38bdf8', 0), 0); sizes[0] = 30;
+  strokes.set(rgba('#e0f2fe', 0), 0); strokeW[0] = 0;
   const meta = [{sym:null, core:true, held:false, side:null}];
   const sizeArr = [30];
   // リンク: まず全ペアのメッシュ（極薄・極弱スプリング）、次に CORE スポーク（太さ=板厚）
@@ -756,11 +799,11 @@ function cosmosBuildArrays(){
       const p = S.portfolio.positions.find(pp => pp.symbol === sym);
       side = p ? p.side : null;
     }
-    colors.set(rgba(decColor(c, held), 1), idx*4);
-    const sz = (15 + score*26) * (held ? 1.35 : 1);   // 大きさ = スコア強度（保有中はさらに拡大）
+    colors.set(rgba(decColor(c, held), 0), idx*4);
+    const sz = (15 + score*26) * (held ? 1.35 : 1);   // 大きさ = スコア強度（スフィア直径の基準。保有中はさらに拡大）
     sizes[idx] = sz; sizeArr[idx] = sz;
-    strokes.set(rgba(held ? '#38bdf8' : '#05070a', 1), idx*4);
-    strokeW[idx] = held ? 3.5 : 1.5;
+    strokes.set(rgba(held ? '#38bdf8' : '#05070a', 0), idx*4);
+    strokeW[idx] = 0;
     // 線の太さ = 板の不均衡（将来スナップショットが orderbook を含めば優先）。
     // 現行スナップショットには無いため、±1% 板厚 depth_usd（対数）で代替する。
     let w = 1;
@@ -776,26 +819,39 @@ function cosmosBuildLabels(){
   const wrap = document.getElementById('graphLabels');
   wrap.innerHTML = '';
   for(const k in cosmosLabelEls) delete cosmosLabelEls[k];
+  const pf = cosmosPanelFactor();
   cosmosMeta.forEach((m, idx)=>{
     const el = document.createElement('div');
     el.className = 'glabel' + (m.held ? ' held ' + (m.side === 'short' ? 'short' : 'long') : '');
-    let inner = '';
+    // スフィア直径: スコア強度 × パネル拡縮。モバイルでも収まる範囲にクランプする
+    let D = (cosmosSizes[idx] || 24) * pf;
+    D = Math.max(m.core ? 27 : 24, Math.min(58, D));
+    cosmosSphereD[idx] = D;
+    cosmosPhase[idx] = (idx*1.37) % (Math.PI*2);
+    cosmosRate[idx] = 0.00030 + (idx%5)*0.00006 + (m.held ? 0.00010 : 0);
+    const base = m.core ? '#38bdf8' : decColor(candBySym[m.sym], m.held);
+    const grad = 'radial-gradient(circle at 33% 28%, rgba(255,255,255,.92) 0%, ' +
+      shade(base, 0.55) + ' 22%, ' + shade(base, 0) + ' 58%, ' + shade(base, -0.55) + ' 100%)';
+    const glow = m.held
+      ? '0 0 30px ' + base + ', 0 0 12px ' + base + ', inset -4px -6px 10px rgba(0,0,0,.5), inset 3px 4px 8px rgba(255,255,255,.28)'
+      : '0 0 14px ' + base + '88, inset -4px -6px 10px rgba(0,0,0,.5), inset 3px 4px 8px rgba(255,255,255,.25)';
+    const fs = Math.max(7.5, Math.min(11, D*0.26));
+    let inner = '<div class="gsphere" style="width:' + D.toFixed(1) + 'px; height:' + D.toFixed(1) + 'px;' +
+      ' background:' + grad + '; box-shadow:' + glow + ';' +
+      (m.held ? ' border:2px solid rgba(56,189,248,.9);' : '') + '">' +
+      '<span style="font-size:' + fs.toFixed(1) + 'px;">' + (m.core ? 'CORE' : esc(m.sym)) + '</span></div>';
     if(m.held) inner += '<div class="gring"></div><div class="gring d2"></div>';
-    if(m.core){
-      inner += '<div class="gtext"><div class="gsym" style="color:#bae6fd;">CORE</div></div>';
-    }else{
-      inner += '<div class="gtext"><div class="gsym" style="color:' + decColor(candBySym[m.sym], m.held) + ';">' + esc(m.sym) + '</div>' +
-        '<div class="gpx">–</div>' + (m.held ? '<div><span class="gpill">保有中</span></div>' : '') + '</div>';
+    if(!m.core){
+      inner += '<div class="gtext"><div class="gpx">–</div>' + (m.held ? '<div><span class="gpill">保有中</span></div>' : '') + '</div>';
     }
     el.innerHTML = inner;
     wrap.appendChild(el);
     const text = el.querySelector('.gtext');
-    const r = cosmosSizes[idx]/2;
-    text.style.transform = m.core ? 'translate(-50%,-50%)' : 'translate(-50%,' + (r + 3).toFixed(1) + 'px)';
+    if(text) text.style.transform = 'translate(-50%,' + (D/2 + 3).toFixed(1) + 'px)';
     if(m.held){
-      el.querySelectorAll('.gring').forEach(rg => { rg.style.width = (2*r + 18) + 'px'; rg.style.height = (2*r + 18) + 'px'; });
+      el.querySelectorAll('.gring').forEach(rg => { rg.style.width = (D + 18) + 'px'; rg.style.height = (D + 18) + 'px'; });
     }
-    cosmosLabelEls[idx] = {root:el, text:text, px:el.querySelector('.gpx')};
+    cosmosLabelEls[idx] = {root:el, text:text, px:el.querySelector('.gpx'), sphere:el.querySelector('.gsphere')};
   });
   cosmosSyncLabelVisibility();
 }
@@ -837,7 +893,7 @@ function cosmosApplyLinks(){
 function cosmosSpawnRing(idx){
   const L = cosmosLabelEls[idx];
   if(!L) return;
-  const r = cosmosSizes[idx]/2;
+  const r = (cosmosSphereD[idx] || cosmosSizes[idx] || 24)/2;
   const rg = document.createElement('div');
   rg.className = 'gring once';
   rg.style.width = (2*r + 16) + 'px'; rg.style.height = (2*r + 16) + 'px';
@@ -918,12 +974,49 @@ function cosmosStopGrowth(){
   if(cosmosGrowTimer){ clearInterval(cosmosGrowTimer); cosmosGrowTimer = null; }
   cosmosGrowing = false;
 }
+function cosmosRefit(pull){
+  if(!cosmosMode || !cosmosGraph || cosmosGraph === 'loading') return;
+  try{ cosmosGraph.fitView(650, 0.16); }catch(e){ try{ cosmosGraph.fitView(); }catch(e2){} }
+  if(pull && pull !== 1){
+    setTimeout(()=>{ if(cosmosMode && cosmosGraph && cosmosGraph !== 'loading'){ try{ cosmosGraph.setZoomLevel(cosmosGraph.getZoomLevel()*pull, 500); }catch(e){} } }, 700);
+  }
+}
 function cosmosFinishGrowth(){
   cosmosStopGrowth();
-  // 最終フレーミング: 全点がパネルに収まるように合わせ、ラベル分だけ少し引く
-  try{ cosmosGraph.fitView(); }catch(e){}
-  setTimeout(()=>{ if(cosmosMode && cosmosGraph && cosmosGraph !== 'loading'){ try{ cosmosGraph.setZoomLevel(cosmosGraph.getZoomLevel()*0.88, 600); }catch(e){} } }, 900);
+  // 最終フレーミング: 全点＋スフィア＋ラベルがパネル内に収まるよう余白付きで合わせる。
+  // 出現直後は点がまだ密集しているため、物理で広がった数秒後にもう一度合わせ直す。
+  cosmosRefit(0.92);
+  setTimeout(()=>{ if(cosmosMode && !cosmosGrowing) cosmosRefit(0.97); }, 3800);
   cosmosUpdateCounter();
+}
+/* ドリフトで点がパネル外へはみ出したら、静かに引き戻す */
+let cosmosRefitWatchStarted = false;
+function cosmosStartRefitWatch(){
+  if(cosmosRefitWatchStarted) return;
+  cosmosRefitWatchStarted = true;
+  setInterval(()=>{
+    if(!cosmosMode || cosmosGrowing || !cosmosGraph || cosmosGraph === 'loading') return;
+    const stage = document.getElementById('graphStage');
+    const W = stage ? stage.clientWidth : 0, H = stage ? stage.clientHeight : 0;
+    if(!W || !H) return;
+    let map = null;
+    try{ map = cosmosGraph.getTrackedPointPositionsMap(); }catch(e){ return; }
+    if(!map || !map.size) return;
+    let out = false, minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9, cnt = 0;
+    map.forEach((pos, idx)=>{
+      if(!cosmosRevealed[idx] || !pos || !isFinite(pos[0]) || !isFinite(pos[1])) return;
+      const sp = cosmosGraph.spaceToScreenPosition(pos);
+      cnt++;
+      if(sp[0] < minX) minX = sp[0]; if(sp[0] > maxX) maxX = sp[0];
+      if(sp[1] < minY) minY = sp[1]; if(sp[1] > maxY) maxY = sp[1];
+      // 余白: 横・上はスフィア半径分、下はラベル（価格＋ピル）分まで見る
+      if(sp[0] < 54 || sp[0] > W - 54 || sp[1] < 48 || sp[1] > H - 74) out = true;
+    });
+    if(!cnt) return;
+    if(out) cosmosRefit(0.94);
+    // 逆にウェブが小さな塊に縮んでいたら、パネルに合わせて広げ直す
+    else if(maxX - minX < W*0.45 && maxY - minY < H*0.45) cosmosRefit(0.97);
+  }, 10000);
 }
 function cosmosApplyData(first){
   if(!cosmosGraph || cosmosGraph === 'loading' || !S) return;
@@ -956,6 +1049,11 @@ function cosmosLabelLoop(){
   if(!cosmosMode) return;
   requestAnimationFrame(cosmosLabelLoop);
   if(!cosmosGraph || cosmosGraph === 'loading') return;
+  const now = performance.now();
+  // 全体ティルト: 両レイヤーを同じ scaleY でゆっくり潰し、3D 回転感を出す
+  if(!cosmosTiltEls) cosmosTiltEls = [document.getElementById('cosmosDiv'), document.getElementById('graphLabels')];
+  const tilt = 'scaleY(' + (0.94 + 0.045*Math.sin(now*0.00019)).toFixed(4) + ')';
+  for(const el of cosmosTiltEls){ if(el) el.style.transform = tilt; }
   let map = null;
   try{ map = cosmosGraph.getTrackedPointPositionsMap(); }catch(e){ return; }
   if(!map || !map.size) return;
@@ -966,6 +1064,13 @@ function cosmosLabelLoop(){
     const sp = cosmosGraph.spaceToScreenPosition(pos);
     L.root.style.transform = 'translate(' + sp[0].toFixed(1) + 'px,' + sp[1].toFixed(1) + 'px)';
     const m = cosmosMeta[idx];
+    // 奥行き振動: スフィアの拡縮＋明るさ＋前後関係をノードごとにずらす
+    if(L.sphere){
+      const osc = Math.sin(now*(cosmosRate[idx] || 0.0004) + (cosmosPhase[idx] || 0));
+      L.sphere.style.transform = 'translate(-50%,-50%) scale(' + (0.86 + 0.15*osc).toFixed(3) + ')';
+      L.sphere.style.filter = 'brightness(' + (0.9 + 0.16*(osc*0.5 + 0.5)).toFixed(3) + ')';
+      L.root.style.zIndex = (m && m.held) ? 300 + Math.round(osc*10) : 100 + Math.round((osc + 1)*25);
+    }
     if(m && !m.core && L.px){
       const px = livePx(m.sym, candBySym[m.sym] ? candBySym[m.sym].price_usd : null);
       const t = px != null ? '$' + fmtPx(px) : '–';
@@ -987,7 +1092,7 @@ function cosmosBreathing(){
   setInterval(()=>{
     if(!cosmosMode || !cosmosGraph || cosmosGraph === 'loading') return;
     hi = !hi;
-    try{ cosmosGraph.setConfigPartial({simulationGravity: hi ? 0.055 : 0.03, simulationRepulsion: hi ? 1.05 : 0.8}); }catch(e){}
+    try{ cosmosGraph.setConfigPartial({simulationGravity: hi ? 0.042 : 0.02, simulationRepulsion: hi ? 1.1 : 0.85}); }catch(e){}
   }, 3600);
 }
 async function cosmosInit(){
@@ -1009,7 +1114,7 @@ async function cosmosInit(){
       scalePointsOnZoom: false,
       transitionDuration: 0,
       randomSeed: 1234,
-      simulationGravity: 0.04,
+      simulationGravity: 0.03,
       simulationRepulsion: 0.9,
       simulationLinkSpring: 1.0,
       simulationLinkDistance: 300,
@@ -1035,6 +1140,7 @@ async function cosmosInit(){
     cosmosApplyData(true);
     requestAnimationFrame(cosmosLabelLoop);
     cosmosBreathing();
+    cosmosStartRefitWatch();
     console.info('cosmos.gl graph active');
   }catch(e){
     console.warn('cosmos.gl unavailable — canvas fallback stays active:', e);
@@ -1151,9 +1257,18 @@ function wsSubscribe(){
   }catch(e){ console.warn('ws subscribe failed', e); }
 }
 
+let cosmosResizeTimer = null;
+function cosmosOnResize(){
+  clearTimeout(cosmosResizeTimer);
+  cosmosResizeTimer = setTimeout(()=>{ if(cosmosMode) cosmosRefit(0.95); }, 280);
+}
 window.addEventListener('resize', ()=>{
   drawEquity();
-  if(cosmosMode && cosmosGraph && cosmosGraph !== 'loading'){ try{ cosmosGraph.fitView(); }catch(e){} }
+  cosmosOnResize();
+});
+window.addEventListener('orientationchange', ()=>{
+  drawEquity();
+  setTimeout(()=>{ if(cosmosMode) cosmosRefit(0.95); }, 350);
 });
 init();
 </script>
