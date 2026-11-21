@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>PAPER DESK LIVE — ライブ・コックピット</title>
+<style>
+  :root{
+    --bg:#05070a; --panel:#0b0f14; --panel2:#0e141c; --line:#1c2735; --line2:#263449;
+    --txt:#e2e8f0; --mut:#7d8da3; --dim:#4b5b70;
+    --grn:#22c55e; --red:#ef4444; --cyn:#38bdf8; --amb:#f59e0b; --pur:#a78bfa;
+    --mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{-webkit-text-size-adjust:100%;}
+  body{background:var(--bg); color:var(--txt); font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP',sans-serif; font-size:13px; line-height:1.45; padding:8px 8px 20px; max-width:1100px; margin:0 auto;}
+  .num{font-family:var(--mono); font-variant-numeric:tabular-nums;}
+  .grn{color:var(--grn);} .red{color:var(--red);} .mut{color:var(--mut);} .cyn{color:var(--cyn);} .amb{color:var(--amb);}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px 10px; margin-bottom:8px;}
+  .panel.flash{animation:fl .9s ease-out;}
+  @keyframes fl{0%{background:#14301d; border-color:var(--grn);}100%{background:var(--panel);}}
+  .ptitle{font-size:10px; letter-spacing:.14em; color:var(--mut); font-weight:700; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;}
+  .ptitle .r{letter-spacing:0; font-weight:400; font-size:10px;}
+
+  /* ticker tape */
+  #tape{display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;}
+  .chip{background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:3px 7px; font-family:var(--mono); font-size:11px; white-space:nowrap; min-width:104px;}
+  .chip b{font-weight:700; margin-right:5px;}
+  .chip .chg{margin-left:5px;}
+
+  /* header */
+  #hdr{display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;}
+  #hdr h1{font-size:15px; letter-spacing:.06em; font-weight:800;}
+  #hdr h1 .live{color:var(--red);}
+  .statusbox{text-align:right; font-size:10px; color:var(--mut); font-family:var(--mono); white-space:nowrap;}
+  .dot{display:inline-block; width:8px; height:8px; border-radius:50%; background:#475569; vertical-align:middle; margin-right:3px;}
+  .dot.on{background:var(--grn); box-shadow:0 0 6px var(--grn);}
+  .dot.mid{background:var(--amb); box-shadow:0 0 6px var(--amb);}
+  .badge{display:inline-block; padding:0 5px; border-radius:3px; font-size:9px; font-weight:700; letter-spacing:.05em; vertical-align:middle;}
+  .b-live{background:#14532d; color:#4ade80;} .b-stale{background:#451a03; color:#fbbf24;}
+  .b-buy{background:#14532d; color:#4ade80;} .b-short{background:#450a0a; color:#f87171;} .b-hold{background:#1e293b; color:#94a3b8;}
+  .b-long{background:#14532d; color:#4ade80;}
+
+  /* stat tiles */
+  #tiles{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:8px;}
+  .tile{background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:7px 9px; min-width:0;}
+  .tile .lb{font-size:9px; color:var(--mut); letter-spacing:.1em; font-weight:700;}
+  .tile .v{font-family:var(--mono); font-size:17px; font-weight:700; line-height:1.25; white-space:nowrap; overflow:hidden;}
+  .tile .s{font-family:var(--mono); font-size:10px; color:var(--mut); white-space:nowrap;}
+  .tile.hero{grid-column:span 3; border-color:var(--line2); background:linear-gradient(180deg,#0d1622,#0b0f14);}
+  .tile.hero .v{font-size:30px;}
+  @media(min-width:640px){ #tiles{grid-template-columns:repeat(6,1fr);} .tile.hero{grid-column:span 2;} .tile .v{font-size:16px;} .tile.hero .v{font-size:26px;} }
+
+  /* stepper */
+  #steps{display:flex; gap:3px; margin-bottom:8px;}
+  .step{flex:1; text-align:center; background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:5px 1px; font-size:9px; font-weight:700; letter-spacing:.08em; color:var(--dim); transition:all .3s; min-width:0; overflow:hidden; white-space:nowrap;}
+  .step.on{color:#052e12; background:var(--grn); border-color:var(--grn); box-shadow:0 0 10px rgba(34,197,94,.45);}
+
+  /* graph */
+  #graphWrap{padding:4px;}
+  #graph{display:block; width:100%; height:360px;}
+  .legend{display:flex; gap:12px; font-size:10px; color:var(--mut); padding:2px 4px 4px; flex-wrap:wrap;}
+  .legend i{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; vertical-align:middle;}
+
+  /* heatmap */
+  .hmwrap{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+  table.hm{border-collapse:separate; border-spacing:2px; width:100%; min-width:430px;}
+  table.hm th{font-size:9px; color:var(--mut); letter-spacing:.06em; font-weight:700; padding:2px 3px; text-align:center;}
+  table.hm th.sym, table.hm td.sym{text-align:left;}
+  table.hm td{border-radius:3px; text-align:center; font-family:var(--mono); font-size:11px; padding:4px 3px; color:#e8eef5; min-width:44px;}
+  td.sym{font-family:var(--mono); font-size:11px; white-space:nowrap; background:transparent !important; color:var(--txt);}
+  tr.held td.sym{color:#fff;}
+  tr.held td.sym::after{content:' ●'; color:var(--cyn); font-size:8px;}
+
+  /* positions */
+  .pos{border:1px solid var(--line); border-radius:5px; padding:7px 9px; margin-bottom:6px; background:var(--panel2);}
+  .pos .row1{display:flex; justify-content:space-between; align-items:center; gap:6px;}
+  .pos .sym{font-family:var(--mono); font-weight:800; font-size:14px;}
+  .pos .pnl{font-family:var(--mono); font-weight:700; font-size:14px; text-align:right;}
+  .pos .grid{display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin-top:5px; font-family:var(--mono); font-size:10px; color:var(--mut);}
+  .pos .grid b{display:block; color:var(--txt); font-size:11px; font-weight:600;}
+  .stopbar{position:relative; height:6px; background:#1e293b; border-radius:3px; margin-top:7px;}
+  .stopbar .zone{position:absolute; left:0; top:0; bottom:0; background:rgba(239,68,68,.35); border-radius:3px 0 0 3px;}
+  .stopbar .mark{position:absolute; top:-3px; width:2px; height:12px; background:#fff; border-radius:1px; box-shadow:0 0 4px #fff;}
+  .stopbar .zero{position:absolute; top:0; bottom:0; width:1px; background:#475569;}
+  .stoplabels{display:flex; justify-content:space-between; font-size:9px; color:var(--dim); font-family:var(--mono); margin-top:2px;}
+
+  /* money flow */
+  .mf{display:grid; grid-template-columns:1fr; gap:8px;}
+  @media(min-width:640px){ .mf{grid-template-columns:1.4fr 1fr 1fr;} }
+  .etfbars{display:flex; align-items:flex-end; gap:3px; height:86px; padding-top:14px;}
+  .etfcol{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; min-width:0;}
+  .etfcol .val{font-family:var(--mono); font-size:8px; color:var(--mut); white-space:nowrap;}
+  .etfcol .bar{width:78%; border-radius:2px 2px 0 0; min-height:2px;}
+  .etfcol .dt{font-family:var(--mono); font-size:8px; color:var(--dim); margin-top:2px;}
+  .liqbar{display:flex; height:16px; border-radius:3px; overflow:hidden; margin:6px 0 4px;}
+  .liqbar div{height:100%;}
+  .tile2{background:var(--panel2); border:1px solid var(--line); border-radius:5px; padding:6px 8px; margin-bottom:6px;}
+  .tile2 .lb{font-size:9px; color:var(--mut); letter-spacing:.08em; font-weight:700;}
+  .tile2 .v{font-family:var(--mono); font-size:15px; font-weight:700;}
+
+  /* feed */
+  .feed{display:grid; grid-template-columns:1fr; gap:8px;}
+  @media(min-width:640px){ .feed{grid-template-columns:1fr 1fr;} }
+  .fitem{display:flex; justify-content:space-between; gap:6px; padding:4px 0; border-bottom:1px dashed #16202e; font-size:11px;}
+  .fitem:last-child{border-bottom:none;}
+  .fitem .l{font-family:var(--mono); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .fitem .r{font-family:var(--mono); font-weight:700; white-space:nowrap;}
+  #eq{display:block; width:100%; height:150px;}
+  footer{color:var(--dim); font-size:10px; text-align:center; padding:10px 4px 0; line-height:1.7;}
+  #ihs{display:none; background:#451a03; border:1px solid var(--amb); color:#fde68a; border-radius:6px; padding:6px 10px; font-size:11px; margin-bottom:8px;}
+</style>
+</head>
+<body>
+
+<div id="tape"></div>
+
+<div id="hdr">
+  <h1>PAPER DESK <span class="live">● LIVE</span><br><span style="font-size:10px; color:var(--mut); letter-spacing:.12em;">MAJOR-COIN PAPER TRADING — COCKPIT</span></h1>
+  <div class="statusbox">
+    <div>状態 <span id="stateBadge" class="badge b-stale">—</span> <span id="genAt">—</span></div>
+    <div style="margin-top:3px;"><span id="wsDot" class="dot"></span><span id="wsTxt">WS 未接続</span> ・ RUN <span id="runCt">—</span></div>
+  </div>
+</div>
+
+<div id="ihs"></div>
+
+<div id="tiles">
+  <div class="tile hero"><div class="lb">評価額（ライブ）</div><div class="v" id="tEqJpy">—</div><div class="s" id="tEqUsd">—</div></div>
+  <div class="tile"><div class="lb">損益（開始 ¥100,000）</div><div class="v" id="tPnl">—</div><div class="s" id="tPnlUsd">—</div></div>
+  <div class="tile"><div class="lb">現金</div><div class="v" id="tCash">—</div><div class="s" id="tCashJpy">—</div></div>
+  <div class="tile"><div class="lb">保有件数</div><div class="v" id="tPos">—</div><div class="s" id="tPosSub">—</div></div>
+  <div class="tile"><div class="lb">勝率 / 決済</div><div class="v" id="tWin">—</div><div class="s" id="tWinSub">—</div></div>
+  <div class="tile"><div class="lb">実現損益</div><div class="v" id="tReal">—</div><div class="s">累計（今の時代）</div></div>
+</div>
+
+<div id="steps"></div>
+
+<div class="panel" id="graphWrap">
+  <div class="ptitle"><span>CRAWLER NETWORK — 銘柄ネットワーク</span><span class="r">ノード色=判定 / 大きさ=スコア / 点滅=ティック受信</span></div>
+  <canvas id="graph"></canvas>
+  <div class="legend">
+    <span><i style="background:var(--grn)"></i>BUY</span>
+    <span><i style="background:var(--red)"></i>SHORT</span>
+    <span><i style="background:#64748b"></i>HOLD</span>
+    <span><i style="background:var(--cyn)"></i>保有中は発光＋パルス</span>
+  </div>
+</div>
+
+<div class="panel" id="hmPanel">
+  <div class="ptitle"><span>SCANNER MATRIX — 要因ヒートマップ</span><span class="r">0=弱気(赤) → 100=強気(緑)</span></div>
+  <div class="hmwrap"><table class="hm" id="hm"></table></div>
+</div>
+
+<div class="panel" id="posPanel">
+  <div class="ptitle"><span>POSITIONS — 保有ポジション（ライブ損益）</span><span class="r" id="posSum"></span></div>
+  <div id="posList"></div>
+</div>
+
+<div class="panel" id="eqPanel">
+  <div class="ptitle"><span>EQUITY — 評価額の推移（USD）</span><span class="r">破線=開始資本 / 右端の点=ライブ</span></div>
+  <canvas id="eq"></canvas>
+</div>
+
+<div class="panel" id="mfPanel">
+  <div class="ptitle"><span>MONEY FLOW — ETF / 清算 / オンチェーン</span><span class="r" id="mfNote"></span></div>
+  <div class="mf">
+    <div>
+      <div class="tile2" style="margin-bottom:0;">
+        <div class="lb">米BTC ETF フロー（$M / 日）</div>
+        <div class="etfbars" id="etfBars"></div>
+        <div class="num" id="etfCum" style="font-size:10px; color:var(--mut); margin-top:3px;">—</div>
+      </div>
+    </div>
+    <div>
+      <div class="tile2"><div class="lb">清算バランス（直近ウィンドウ合計）</div>
+        <div class="liqbar"><div id="liqL" style="background:var(--red); width:50%;"></div><div id="liqS" style="background:var(--grn); width:50%;"></div></div>
+        <div class="num" style="font-size:10px;"><span class="red" id="liqLt">ロング清算 —</span><br><span class="grn" id="liqSt">ショート清算 —</span></div>
+      </div>
+      <div class="tile2" style="margin-bottom:0;"><div class="lb">BTC 吸収力（板 vs 清算）</div><div class="v" id="absV" style="font-size:12px;">—</div><div class="num mut" id="absS" style="font-size:10px;">—</div></div>
+    </div>
+    <div>
+      <div class="tile2"><div class="lb">オンチェーン BTC 純フロー</div><div class="v" id="ocBtc">—</div><div class="num mut" style="font-size:10px;" id="ocBtcS">—</div></div>
+      <div class="tile2" style="margin-bottom:0;"><div class="lb">オンチェーン ETH 純フロー</div><div class="v" id="ocEth">—</div><div class="num mut" style="font-size:10px;" id="ocEthS">—</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="feed">
+  <div class="panel" id="fillPanel" style="margin-bottom:0;">
+    <div class="ptitle"><span>FILLS — 直近の約定</span></div>
+    <div id="fillList"></div>
+  </div>
+  <div class="panel" id="closedPanel" style="margin-bottom:0;">
+    <div class="ptitle"><span>CLOSED — 決済履歴</span></div>
+    <div id="closedList"></div>
+  </div>
+</div>
+
+<footer>
+  ペーパー取引のライブ表示です（実売買はしません）<br>
+  判定は30分ごとのスキャン（状態は自動更新）、価格は Kraken WebSocket で毎秒更新
+</footer>
+
+<script>
+'use strict';
+/* ============================== state ============================== */
+let S = null;                 // desk snapshot
+let stateLive = false;
+let lastGenAt = null;
+const prices = {};            // pair -> {last, chg}
+const symByPair = {};         // pair -> symbol
+const candBySym = {};         // symbol -> candidate
+const flashes = {};           // symbol -> timestamp(ms)
+let ws = null, wsBackoff = 1000, wsOk = false;
+
+/* ============================== format ============================= */
+const nfC = dp => new Intl.NumberFormat('en-US',{minimumFractionDigits:dp, maximumFractionDigits:dp});
+function fmtPx(v){
+  if(v==null || isNaN(v)) return '–';
+  const a = Math.abs(v);
+  if(a>=10000) return nfC(0).format(v);
+  if(a>=1000)  return nfC(1).format(v);
+  if(a>=100)   return nfC(2).format(v);
+  if(a>=1)     return nfC(3).format(v);
+  if(a>=0.1)   return nfC(4).format(v);
+  return nfC(6).format(v);
+}
+function fmtUSD(v, dp){
+  if(v==null || isNaN(v)) return '–';
+  if(dp==null) dp = Math.abs(v)>=1000 ? 0 : 2;
+  return (v<0?'-$':'$') + nfC(dp).format(Math.abs(v));
+}
+function fmtJPY(v){ if(v==null||isNaN(v)) return '–'; return (v<0?'-¥':'¥') + nfC(0).format(Math.abs(Math.round(v))); }
+function fmtM(v){
+  if(v==null||isNaN(v)) return '–';
+  const a=Math.abs(v), s=v<0?'-':'';
+  if(a>=1e9) return s+'$'+(a/1e9).toFixed(2)+'B';
+  if(a>=1e6) return s+'$'+(a/1e6).toFixed(1)+'M';
+  if(a>=1e3) return s+'$'+(a/1e3).toFixed(1)+'K';
+  return s+'$'+a.toFixed(0);
+}
+function fmtPct(v, dp){
+  if(v==null||isNaN(v)) return '–';
+  return (v>0?'+':'') + v.toFixed(dp==null?2:dp) + '%';
+}
+function cls(v){ return v>0 ? 'grn' : (v<0 ? 'red' : ''); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ============================ live prices ========================== */
+function livePx(sym, fallback){
+  const pair = S && S.kraken_pairs ? S.kraken_pairs[sym] : null;
+  if(pair && prices[pair] && prices[pair].last != null) return prices[pair].last;
+  return fallback;
+}
+function liveChg24(sym){
+  const pair = S && S.kraken_pairs ? S.kraken_pairs[sym] : null;
+  if(pair && prices[pair] && prices[pair].chg != null) return prices[pair].chg;
+  const c = candBySym[sym];
+  return c ? c.change_24h_pct : null;
+}
+function posLivePnl(p){
+  const px = livePx(p.symbol, p.current_price_usd);
+  if(px==null || !p.entry_price_usd) return {px:px, pnl:0, pct:0};
+  const r = p.side === 'short' ? (1 - px/p.entry_price_usd) : (px/p.entry_price_usd - 1);
+  return {px:px, pnl:r*p.cost_usd, pct:r*100};
+}
+function liveEquity(){
+  if(!S) return null;
+  let eq = S.capital.cash_usd;
+  for(const p of S.portfolio.positions){
+    const px = livePx(p.symbol, p.current_price_usd);
+    eq += (px!=null ? p.amount*px : p.value_usd);
+  }
+  return eq;
+}
+
+/* ============================== header ============================= */
+function renderHeader(){
+  if(!S) return;
+  const eq = liveEquity();
+  const rate = S.capital.jpy ? S.capital.jpy.rate : null;
+  const eqJ = rate ? eq*rate : null;
+  document.getElementById('tEqJpy').textContent = fmtJPY(eqJ);
+  document.getElementById('tEqUsd').textContent = fmtUSD(eq) + (rate ? '  @ ¥' + rate.toFixed(2) : '');
+  const pnlJ = eqJ!=null ? eqJ - S.portfolio.start_jpy : null;
+  const pnlU = eq - S.portfolio.start_usd;
+  const pe = document.getElementById('tPnl');
+  pe.textContent = fmtJPY(pnlJ); pe.className = 'v ' + cls(pnlJ||0);
+  const pu = document.getElementById('tPnlUsd');
+  pu.textContent = fmtUSD(pnlU) + ' / ' + fmtPct(S.portfolio.start_usd ? pnlU/S.portfolio.start_usd*100 : 0);
+  pu.className = 's ' + cls(pnlU);
+  document.getElementById('tCash').textContent = fmtUSD(S.capital.cash_usd);
+  document.getElementById('tCashJpy').textContent = fmtJPY(S.capital.jpy ? S.capital.jpy.cash_jpy : null);
+  const pos = S.portfolio.positions;
+  document.getElementById('tPos').textContent = pos.length + ' 件';
+  const un = pos.reduce((a,p)=>a+posLivePnl(p).pnl, 0);
+  const ps = document.getElementById('tPosSub');
+  ps.textContent = '含み ' + fmtUSD(un); ps.className = 's ' + cls(un);
+  const st = S.stats || {};
+  document.getElementById('tWin').textContent = st.win_rate!=null ? (st.win_rate*100).toFixed(0)+'%' : '–';
+  document.getElementById('tWinSub').textContent = (st.wins||0) + '勝 / ' + (st.closed_count||0) + '決済';
+  const re = document.getElementById('tReal');
+  re.textContent = fmtUSD(st.realized_pnl_usd); re.className = 'v ' + cls(st.realized_pnl_usd||0);
+  document.getElementById('genAt').textContent = S.generated_at_jst || '—';
+  document.getElementById('runCt').textContent = S.run_count!=null ? S.run_count : '—';
+  const b = document.getElementById('stateBadge');
+  b.textContent = stateLive ? 'LIVE' : 'STALE';
+  b.className = 'badge ' + (stateLive ? 'b-live' : 'b-stale');
+  const ihs = document.getElementById('ihs');
+  if(S.ihs_alerts && S.ihs_alerts.length){
+    ihs.style.display = 'block';
+    ihs.textContent = '⚠ 逆三尊 形成中: ' + S.ihs_alerts.map(a => typeof a==='string' ? a : (a.symbol||'') + ' ' + (a.detail||a.timeframe||'')).join(' / ');
+  } else ihs.style.display = 'none';
+}
+
+/* ============================== tape =============================== */
+function renderTape(){
+  const t = document.getElementById('tape');
+  t.innerHTML = '';
+  if(!S) return;
+  for(const sym of S.universe){
+    const c = candBySym[sym];
+    const px = livePx(sym, c ? c.price_usd : null);
+    const ch = liveChg24(sym);
+    const d = document.createElement('div');
+    d.className = 'chip'; d.id = 'chip-' + sym;
+    d.innerHTML = '<b>' + esc(sym) + '</b>$' + fmtPx(px) + '<span class="chg ' + cls(ch||0) + '">' + fmtPct(ch,1) + '</span>';
+    t.appendChild(d);
+  }
+}
+function tickTape(sym){
+  const el = document.getElementById('chip-' + sym);
+  if(!el || !S) return;
+  const c = candBySym[sym];
+  const px = livePx(sym, c ? c.price_usd : null);
+  const ch = liveChg24(sym);
+  el.innerHTML = '<b>' + esc(sym) + '</b>$' + fmtPx(px) + '<span class="chg ' + cls(ch||0) + '">' + fmtPct(ch,1) + '</span>';
+}
+
+/* ============================= stepper ============================= */
+const STEP_NAMES = ['SCAN','VET','ANALYZE','CHIEF','GATE','FILLS','RISK'];
+(function(){
+  const w = document.getElementById('steps');
+  STEP_NAMES.forEach((n,i)=>{
+    const d = document.createElement('div');
+    d.className = 'step' + (i===0?' on':''); d.textContent = (i+1) + ' ' + n; d.id = 'step-' + i;
+    w.appendChild(d);
+  });
+  let cur = 0;
+  setInterval(()=>{
+    document.getElementById('step-' + cur).classList.remove('on');
+    cur = (cur+1) % STEP_NAMES.length;
+    document.getElementById('step-' + cur).classList.add('on');
+  }, 900);
+})();
+
+/* ============================= heatmap ============================= */
+function cellColor(v){
+  if(v==null || isNaN(v)) return 'background:#111827; color:#475569;';
+  v = Math.max(0, Math.min(1, v));
+  let r,g,b;
+  if(v < 0.5){ const t = v/0.5; r = 185+(30-185)*t; g = 28+(41-28)*t; b = 28+(59-28)*t; }
+  else { const t = (v-0.5)/0.5; r = 30+(22-30)*t; g = 41+(163-41)*t; b = 59+(74-59)*t; }
+  return 'background:rgb(' + Math.round(r) + ',' + Math.round(g) + ',' + Math.round(b) + ');';
+}
+function renderHeatmap(){
+  const tb = document.getElementById('hm');
+  if(!S){ tb.innerHTML=''; return; }
+  const cols = [['SCAN','scan'],['VET','vet'],['SOCIAL','social'],['TECH','tech'],['CHIEF','chief_score'],['CHIEF_S','chief_short']];
+  let h = '<tr><th class="sym">銘柄</th>' + cols.map(c=>'<th>'+c[0]+'</th>').join('') + '<th>判定</th></tr>';
+  for(const c of S.candidates){
+    h += '<tr' + (c.held ? ' class="held"' : '') + '><td class="sym">' + esc(c.symbol) + '</td>';
+    for(const col of cols){
+      const v = c[col[1]];
+      h += '<td style="' + cellColor(v) + '">' + (v==null||isNaN(v) ? '–' : Math.round(v*100)) + '</td>';
+    }
+    const dc = c.decision==='BUY' ? 'b-buy' : (c.decision==='SHORT' ? 'b-short' : 'b-hold');
+    h += '<td style="background:transparent;"><span class="badge ' + dc + '">' + esc(c.decision||'—') + '</span></td></tr>';
+  }
+  tb.innerHTML = h;
+}
+
+/* ============================= positions =========================== */
+function renderPositions(){
+  const w = document.getElementById('posList');
+  if(!S){ w.innerHTML=''; return; }
+  w.innerHTML = '';
+  const pos = S.portfolio.positions;
+  if(!pos.length){ w.innerHTML = '<div class="mut" style="font-size:11px;">保有ポジションなし</div>'; }
+  for(const p of pos){
+    const d = document.createElement('div');
+    d.className = 'pos'; d.id = 'pos-' + p.symbol;
+    const sideB = p.side==='short' ? '<span class="badge b-short">SHORT</span>' : '<span class="badge b-long">LONG</span>';
+    d.innerHTML =
+      '<div class="row1"><span class="sym">' + esc(p.symbol) + ' ' + sideB +
+      (p.partial_done ? ' <span class="badge" style="background:#172554; color:#93c5fd;">部分利確済</span>' : '') +
+      '</span><span class="pnl" data-f="pnl"></span></div>' +
+      '<div class="grid">' +
+      '<span>建値<b>$' + fmtPx(p.entry_price_usd) + '</b></span>' +
+      '<span>現在値<b data-f="px">—</b></span>' +
+      '<span>数量<b>' + nfC(2).format(p.amount) + '</b></span>' +
+      '<span>建玉額<b>' + fmtUSD(p.cost_usd) + '</b></span>' +
+      '<span>建て日時<b style="font-size:9px;">' + esc((p.opened_at_jst||'').replace(' JST','')) + '</b></span>' +
+      '<span>損切幅<b>-' + (p.stop_pct!=null ? p.stop_pct.toFixed(2) : '–') + '%</b></span>' +
+      '<span>利確1<b>' + (p.take_profit_1_pct!=null ? '+'+p.take_profit_1_pct.toFixed(2)+'%' : 'トレール') + '</b></span>' +
+      '<span>含み%<b data-f="pct">—</b></span>' +
+      '</div>' +
+      '<div class="stopbar"><div class="zone" data-f="zone"></div><div class="zero" data-f="zero"></div><div class="mark" data-f="mark"></div></div>' +
+      '<div class="stoplabels"><span data-f="sl">SL</span><span data-f="mid"></span><span data-f="tp">TP</span></div>';
+    w.appendChild(d);
+    updatePosCard(p);
+  }
+  const un = pos.reduce((a,p)=>a+posLivePnl(p).pnl, 0);
+  const ps = document.getElementById('posSum');
+  ps.textContent = '含み損益 ' + fmtUSD(un); ps.className = 'r ' + cls(un);
+}
+function updatePosCard(p){
+  const d = document.getElementById('pos-' + p.symbol);
+  if(!d) return;
+  const L = posLivePnl(p);
+  const pnlEl = d.querySelector('[data-f="pnl"]');
+  pnlEl.textContent = fmtUSD(L.pnl) + ' (' + fmtPct(L.pct) + ')';
+  pnlEl.className = 'pnl ' + cls(L.pnl);
+  d.querySelector('[data-f="px"]').textContent = '$' + fmtPx(L.px);
+  const pctEl = d.querySelector('[data-f="pct"]');
+  pctEl.textContent = fmtPct(L.pct); pctEl.className = cls(L.pct);
+  // stop bar: range from -stop_pct to +tp (tp1 or stop*1.5)
+  const stop = p.stop_pct || 10;
+  const tp = p.take_profit_1_pct != null ? p.take_profit_1_pct : stop*1.5;
+  const min = -stop, max = tp, span = max - min;
+  const zeroPct = (0 - min)/span*100;
+  const markPct = Math.max(0, Math.min(100, (L.pct - min)/span*100));
+  d.querySelector('[data-f="zone"]').style.width = zeroPct + '%';
+  d.querySelector('[data-f="zero"]').style.left = zeroPct + '%';
+  d.querySelector('[data-f="mark"]').style.left = 'calc(' + markPct + '% - 1px)';
+  d.querySelector('[data-f="sl"]').textContent = 'SL -' + stop.toFixed(1) + '%';
+  d.querySelector('[data-f="mid"]').textContent = '損切まで あと ' + Math.max(0, L.pct + stop).toFixed(2) + '%';
+  d.querySelector('[data-f="tp"]').textContent = 'TP +' + tp.toFixed(1) + '%';
+}
+function tickPositions(){
+  if(!S) return;
+  for(const p of S.portfolio.positions) updatePosCard(p);
+  const un = S.portfolio.positions.reduce((a,p)=>a+posLivePnl(p).pnl, 0);
+  const ps = document.getElementById('posSum');
+  if(ps){ ps.textContent = '含み損益 ' + fmtUSD(un); ps.className = 'r ' + cls(un); }
+}
+
+/* ============================ equity chart ========================= */
+const liveSamples = [];
+function drawEquity(){
+  const cv = document.getElementById('eq');
+  const dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  if(!W) return;
+  if(cv.width !== Math.round(W*dpr)){ cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  if(!S || !S.equity_history || !S.equity_history.length) return;
+  const pts = S.equity_history.map(e => e.equity_usd);
+  const live = liveEquity();
+  const all = pts.concat(live!=null ? [live] : []);
+  let mn = Math.min.apply(null, all.concat([S.portfolio.start_usd]));
+  let mx = Math.max.apply(null, all.concat([S.portfolio.start_usd]));
+  const pad = (mx-mn)*0.12 || 10; mn -= pad; mx += pad;
+  const X = i => 6 + (W-12) * (all.length<2 ? 0 : i/(all.length-1));
+  const Y = v => 8 + (H-20) * (1 - (v-mn)/(mx-mn));
+  // baseline
+  ctx.strokeStyle = '#475569'; ctx.setLineDash([4,4]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, Y(S.portfolio.start_usd)); ctx.lineTo(W, Y(S.portfolio.start_usd)); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#64748b'; ctx.font = '9px ' + getComputedStyle(document.body).getPropertyValue('--mono');
+  ctx.fillText('開始 $' + nfC(0).format(S.portfolio.start_usd), 6, Y(S.portfolio.start_usd) - 3);
+  // history line
+  ctx.beginPath();
+  pts.forEach((v,i)=>{ i===0 ? ctx.moveTo(X(i), Y(v)) : ctx.lineTo(X(i), Y(v)); });
+  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.6; ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 5; ctx.stroke();
+  ctx.shadowBlur = 0;
+  // fill under
+  ctx.lineTo(X(pts.length-1), H-4); ctx.lineTo(X(0), H-4); ctx.closePath();
+  ctx.fillStyle = 'rgba(56,189,248,.08)'; ctx.fill();
+  // live point
+  if(live!=null){
+    const lx = X(all.length-1), ly = Y(live);
+    ctx.beginPath(); ctx.moveTo(X(pts.length-1), Y(pts[pts.length-1])); ctx.lineTo(lx, ly);
+    ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.beginPath(); ctx.arc(lx, ly, 3.2, 0, Math.PI*2);
+    ctx.fillStyle = '#22c55e'; ctx.shadowColor = '#22c55e'; ctx.shadowBlur = 8; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 10px ui-monospace, monospace';
+    ctx.fillText(fmtUSD(live,0), Math.max(4, lx-52), Math.max(10, ly-7));
+  }
+  ctx.fillStyle = '#64748b'; ctx.font = '9px ui-monospace, monospace';
+  ctx.fillText(fmtUSD(mx-pad,0), 6, 12);
+  ctx.fillText(fmtUSD(mn+pad,0), 6, H-4);
+}
+setInterval(()=>{ drawEquity(); }, 1000);
+
+/* ============================ money flow =========================== */
+function renderMoneyFlow(){
+  if(!S) return;
+  // ETF (BTC)
+  const bw = document.getElementById('etfBars');
+  bw.innerHTML = '';
+  const etf = S.etf_flows && S.etf_flows.BTC;
+  if(etf && etf.recent && etf.recent.length){
+    const rows = etf.recent.slice(-10);
+    const mx = Math.max.apply(null, rows.map(r => Math.abs(r.total_usd_m))) || 1;
+    for(const r of rows){
+      const col = document.createElement('div'); col.className = 'etfcol';
+      const h = Math.max(3, Math.abs(r.total_usd_m)/mx*52);
+      col.innerHTML = '<div class="val">' + (r.total_usd_m>0?'+':'') + Math.round(r.total_usd_m) + '</div>' +
+        '<div class="bar" style="height:' + h + 'px; background:' + (r.total_usd_m>=0 ? 'var(--grn)' : 'var(--red)') + '; opacity:' + (r.partial ? .5 : 1) + ';"></div>' +
+        '<div class="dt">' + esc(r.date.slice(5)) + '</div>';
+      bw.appendChild(col);
+    }
+    const cum = etf.cum5_complete_usd_m;
+    document.getElementById('etfCum').innerHTML = '5日累計（完了日） <b class="' + cls(cum||0) + '">' + (cum!=null ? (cum>0?'+':'') + nfC(0).format(cum) + ' $M' : '–') + '</b>' +
+      (S.etf_flows.ETH && S.etf_flows.ETH.cum5_complete_usd_m!=null ? ' ・ ETH 5日 <b class="' + cls(S.etf_flows.ETH.cum5_complete_usd_m) + '">' + (S.etf_flows.ETH.cum5_complete_usd_m>0?'+':'') + nfC(0).format(S.etf_flows.ETH.cum5_complete_usd_m) + ' $M</b>' : '') +
+      ' <span style="color:var(--dim)">半透明=暫定日</span>';
+  } else { bw.innerHTML = '<div class="mut" style="font-size:10px;">データなし</div>'; }
+  // Liquidations balance
+  let L = 0, Sh = 0, any = false;
+  for(const c of S.candidates){
+    if(c.liquidations){ any = true; L += c.liquidations.window_long_usd||0; Sh += c.liquidations.window_short_usd||0; }
+  }
+  if(any && (L+Sh) > 0){
+    document.getElementById('liqL').style.width = (L/(L+Sh)*100) + '%';
+    document.getElementById('liqS').style.width = (Sh/(L+Sh)*100) + '%';
+    document.getElementById('liqLt').textContent = 'ロング清算 ' + fmtM(L);
+    document.getElementById('liqSt').textContent = 'ショート清算 ' + fmtM(Sh);
+  } else {
+    document.getElementById('liqLt').textContent = 'ロング清算 —';
+    document.getElementById('liqSt').textContent = 'ショート清算 —';
+  }
+  // Absorption (BTC)
+  const btc = candBySym['BTC'];
+  const ab = btc && btc.absorption;
+  if(ab){
+    document.getElementById('absV').textContent = '優勢: ' + (ab.dominant==='liquidation' ? '清算クラスター' : ab.dominant==='orderbook' ? '板（注文）' : ab.dominant==='mixed' ? '拮抗' : (ab.dominant||'—'));
+    const md = ab.max_cluster_down, mu = ab.max_cluster_up;
+    document.getElementById('absS').textContent =
+      '下方最大 ' + (md ? '$' + fmtPx(md.price) + ' / ' + fmtM(md.usd) : '—') +
+      ' ・ 上方最大 ' + (mu ? '$' + fmtPx(mu.price) + ' / ' + fmtM(mu.usd) : '—');
+  }
+  // Onchain
+  const oc = S.onchain || {};
+  function ocFill(elV, elS, o){
+    if(!o || o.netflow_usd==null){ elV.textContent = '—'; elS.textContent = ''; return; }
+    const out = o.netflow_usd >= 0; // netflow = 流出-流入
+    elV.innerHTML = '<span class="' + (out ? 'grn' : 'red') + '">' + fmtM(Math.abs(o.netflow_usd)) + '</span> <span style="font-size:10px;">' + (out ? '純流出' : '純流入') + '</span>';
+    elS.textContent = (o.date||'') + ' ・ 流入 ' + fmtM(o.flow_in_usd) + ' / 流出 ' + fmtM(o.flow_out_usd);
+  }
+  ocFill(document.getElementById('ocBtc'), document.getElementById('ocBtcS'), oc.BTC);
+  ocFill(document.getElementById('ocEth'), document.getElementById('ocEthS'), oc.ETH);
+  document.getElementById('mfNote').textContent = oc.BTC && oc.BTC.date ? 'オンチェーン ' + oc.BTC.date + ' 時点' : '';
+}
+
+/* ================================ feed ============================= */
+function renderFeed(){
+  if(!S) return;
+  const fl = document.getElementById('fillList');
+  fl.innerHTML = '';
+  const fills = (S.fills || []).slice(-8).reverse();
+  if(!fills.length) fl.innerHTML = '<div class="mut" style="font-size:11px;">約定なし</div>';
+  for(const f of fills){
+    const d = document.createElement('div'); d.className = 'fitem';
+    d.innerHTML = '<span class="l">' + esc(f.time_jst||'') + ' <b>' + esc(f.symbol) + '</b> ' + esc(f.side||'') + ' <span class="mut">' + esc(f.reason||'') + (f.partial?' (部分)':'') + '</span></span>' +
+      '<span class="r">' + fmtUSD(f.usd_amount) + '</span>';
+    fl.appendChild(d);
+  }
+  const cl = document.getElementById('closedList');
+  cl.innerHTML = '';
+  const closed = (S.closed_trades || []).slice(-8).reverse();
+  if(!closed.length) cl.innerHTML = '<div class="mut" style="font-size:11px;">決済なし</div>';
+  for(const t of closed){
+    const d = document.createElement('div'); d.className = 'fitem';
+    d.innerHTML = '<span class="l">' + esc((t.closed_at_jst||'').slice(5,16)) + ' <b>' + esc(t.symbol) + '</b> ' + (t.side==='short'?'S':'L') + ' <span class="mut">' + esc(t.reason||'') + '</span></span>' +
+      '<span class="r ' + cls(t.pnl_usd||0) + '">' + fmtUSD(t.pnl_usd) + ' (' + fmtPct(t.pnl_pct) + ')</span>';
+    cl.appendChild(d);
+  }
+}
+
+/* ============================ network graph ======================== */
+const gcv = document.getElementById('graph');
+const gtx = gcv.getContext('2d');
+let rot = 0;
+const packets = {}; // sym -> t (0..1)
+function sizeGraph(){
+  const dpr = window.devicePixelRatio || 1;
+  const W = gcv.clientWidth, H = gcv.clientHeight;
+  if(W && (gcv.width !== Math.round(W*dpr) || gcv.height !== Math.round(H*dpr))){
+    gcv.width = Math.round(W*dpr); gcv.height = Math.round(H*dpr);
+  }
+}
+function drawGraph(now){
+  requestAnimationFrame(drawGraph);
+  sizeGraph();
+  const dpr = window.devicePixelRatio || 1;
+  const W = gcv.clientWidth, H = gcv.clientHeight;
+  if(!W || !H) return;
+  gtx.setTransform(dpr,0,0,dpr,0,0);
+  gtx.clearRect(0,0,W,H);
+  if(!S) return;
+  rot += 0.00045;
+  const cx = W/2, cy = H/2;
+  const R = Math.min(W,H)*0.355;
+  const syms = S.universe;
+  const pos = {};
+  syms.forEach((sym,i)=>{
+    const a = rot + i/syms.length*Math.PI*2 - Math.PI/2;
+    pos[sym] = {x: cx + Math.cos(a)*R, y: cy + Math.sin(a)*R*0.92};
+  });
+  // edges + packets
+  for(const sym of syms){
+    const p = pos[sym], c = candBySym[sym];
+    gtx.beginPath(); gtx.moveTo(cx,cy); gtx.lineTo(p.x,p.y);
+    gtx.strokeStyle = 'rgba(56,189,248,.16)'; gtx.lineWidth = 1; gtx.stroke();
+    const c1h = c ? Math.abs(c.change_1h_pct||0) : 0;
+    if(packets[sym]==null) packets[sym] = Math.random();
+    packets[sym] += 0.0022 + Math.min(c1h,12)*0.0011;
+    if(packets[sym] > 1) packets[sym] -= 1;
+    const t = packets[sym];
+    const pxp = cx + (p.x-cx)*t, pyp = cy + (p.y-cy)*t;
+    gtx.beginPath(); gtx.arc(pxp, pyp, 1.8, 0, Math.PI*2);
+    gtx.fillStyle = 'rgba(125,211,252,.85)'; gtx.fill();
+  }
+  // center
+  gtx.beginPath(); gtx.arc(cx,cy,17,0,Math.PI*2);
+  gtx.fillStyle = '#0e2233'; gtx.shadowColor = '#38bdf8'; gtx.shadowBlur = 14; gtx.fill(); gtx.shadowBlur = 0;
+  gtx.strokeStyle = '#38bdf8'; gtx.lineWidth = 1.2; gtx.stroke();
+  gtx.fillStyle = '#bae6fd'; gtx.font = 'bold 9px ui-monospace, monospace'; gtx.textAlign = 'center';
+  gtx.fillText('CORE', cx, cy+3);
+  // nodes
+  for(const sym of syms){
+    const p = pos[sym], c = candBySym[sym];
+    const score = c ? Math.max(c.chief_score||0, c.chief_short||0) : 0.3;
+    const r = 9 + score*20;
+    const col = !c ? '#64748b' : (c.decision==='BUY' ? '#22c55e' : (c.decision==='SHORT' ? '#ef4444' : '#64748b'));
+    const held = c && c.held;
+    if(held){
+      for(let k=0;k<2;k++){
+        const ph = ((now/1400) + k*0.5 + syms.indexOf(sym)*0.13) % 1;
+        gtx.beginPath(); gtx.arc(p.x, p.y, r + ph*16, 0, Math.PI*2);
+        gtx.strokeStyle = 'rgba(56,189,248,' + (0.35*(1-ph)).toFixed(3) + ')'; gtx.lineWidth = 1.4; gtx.stroke();
+      }
+    }
+    const fa = flashes[sym] ? now - flashes[sym] : 9999;
+    if(fa < 700){
+      gtx.beginPath(); gtx.arc(p.x, p.y, r + fa/700*13, 0, Math.PI*2);
+      gtx.strokeStyle = 'rgba(255,255,255,' + (0.7*(1-fa/700)).toFixed(3) + ')'; gtx.lineWidth = 1.6; gtx.stroke();
+    }
+    gtx.beginPath(); gtx.arc(p.x, p.y, r, 0, Math.PI*2);
+    gtx.fillStyle = '#0b1220';
+    if(held || fa<700){ gtx.shadowColor = col; gtx.shadowBlur = held ? 16 : 12; }
+    gtx.fill(); gtx.shadowBlur = 0;
+    gtx.strokeStyle = col; gtx.lineWidth = held ? 2.2 : 1.4; gtx.stroke();
+    gtx.fillStyle = col; gtx.font = 'bold 8px ui-monospace, monospace'; gtx.textAlign = 'center';
+    gtx.fillText(sym, p.x, p.y+2.5);
+    const px = livePx(sym, c ? c.price_usd : null);
+    gtx.fillStyle = '#cbd5e1'; gtx.font = '8.5px ui-monospace, monospace';
+    gtx.fillText(px!=null ? '$'+fmtPx(px) : '–', p.x, p.y + r + 11);
+  }
+  gtx.textAlign = 'left';
+}
+requestAnimationFrame(drawGraph);
+
+/* ============================ state loading ======================== */
+function applyState(ns, live){
+  const changed = lastGenAt !== null && ns.generated_at_jst !== lastGenAt;
+  S = ns; stateLive = live;
+  lastGenAt = ns.generated_at_jst;
+  for(const k in candBySym) delete candBySym[k];
+  (S.candidates||[]).forEach(c => candBySym[c.symbol] = c);
+  for(const k in symByPair) delete symByPair[k];
+  Object.keys(S.kraken_pairs||{}).forEach(sym => symByPair[S.kraken_pairs[sym]] = sym);
+  renderTape(); renderHeader(); renderHeatmap(); renderPositions(); renderMoneyFlow(); renderFeed(); drawEquity();
+  if(changed){
+    document.querySelectorAll('.panel').forEach(el => { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); });
+  }
+  wsSubscribe();
+}
+async function fetchState(){
+  try{
+    let j = null;
+    for(const u of ['desk_snapshot.json', '/api/state']){
+      try{
+        const r = await fetch(u, {cache:'no-store'});
+        if(r.ok){ j = await r.json(); break; }
+      }catch(e){ /* try next source */ }
+    }
+    if(!j) throw new Error('state unavailable');
+    applyState(j, true);
+    return true;
+  }catch(e){
+    if(S) stateLive = false;
+    renderHeader();
+    return false;
+  }
+}
+async function init(){
+  const ok = await fetchState();
+  if(!ok){
+    try{
+      const r = await fetch('fallback.json', {cache:'no-store'});
+      const j = await r.json();
+      applyState(j, false);
+    }catch(e){ /* keep blank */ }
+  }
+  connectWS();
+  setInterval(fetchState, 30000);
+  setInterval(()=>{ renderHeader(); }, 1000);
+}
+
+/* ============================== websocket ========================== */
+function wsSet(state, txt){
+  const d = document.getElementById('wsDot'), t = document.getElementById('wsTxt');
+  d.className = 'dot' + (state==='on' ? ' on' : (state==='mid' ? ' mid' : ''));
+  t.textContent = txt;
+}
+function connectWS(){
+  if(ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+  wsSet('mid', 'WS 接続中…');
+  let sock;
+  try{ sock = new WebSocket('wss://ws.kraken.com/v2'); }
+  catch(e){ scheduleReconnect(); return; }
+  ws = sock;
+  sock.onopen = ()=>{ wsOk = true; wsBackoff = 1000; wsSet('on', 'WS 接続中'); wsSubscribe(); };
+  sock.onmessage = ev => {
+    let m; try{ m = JSON.parse(ev.data); }catch(e){ return; }
+    if(m && m.success === false){ console.warn('kraken ws:', m.errorMessage || m); return; }
+    if(m && m.channel === 'ticker' && Array.isArray(m.data)){
+      for(const d of m.data){
+        if(d.symbol && d.last != null){
+          prices[d.symbol] = {last: d.last, chg: (d.change_pct != null ? d.change_pct : (prices[d.symbol]||{}).chg)};
+          const sym = symByPair[d.symbol];
+          if(sym){
+            flashes[sym] = performance.now();
+            tickTape(sym);
+          }
+        }
+      }
+      tickPositions(); renderHeader();
+    }
+  };
+  sock.onclose = ()=>{ wsOk = false; wsSet('', 'WS 切断'); scheduleReconnect(); };
+  sock.onerror = ()=>{ try{ sock.close(); }catch(e){} };
+}
+function scheduleReconnect(){
+  wsSet('mid', 'WS 再接続待ち…');
+  const wait = wsBackoff;
+  wsBackoff = Math.min(wsBackoff*2, 30000);
+  setTimeout(connectWS, wait);
+}
+function wsSubscribe(){
+  if(!ws || ws.readyState !== 1 || !S || !S.kraken_pairs) return;
+  const pairs = Object.values(S.kraken_pairs);
+  if(!pairs.length) return;
+  try{
+    ws.send(JSON.stringify({method:'subscribe', params:{channel:'ticker', symbol:pairs}}));
+  }catch(e){ console.warn('ws subscribe failed', e); }
+}
+
+window.addEventListener('resize', ()=>{ drawEquity(); });
+init();
+</script>
+</body>
+</html>
