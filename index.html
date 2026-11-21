@@ -695,7 +695,7 @@ requestAnimationFrame(drawGraph);
    近傍に「出現」して物理演算で外へ広がり、不規則なウェブ状になる
    （リング配置・等間隔スポークはしない）。スポークの下には全ペアの
    薄いメッシュを敷き、ウェブとして読めるようにする。 */
-const COSMOS_CDN = 'https://cdn.jsdelivr.net/npm/@cosmos.gl/graph@3.6.0/+esm';
+const COSMOS_CDN = './cosmos.bundle.js';
 const COSMOS_CENTER = 2048;             // spaceSize 4096 の中心
 const COSMOS_GROW_MS = 420;             // 成長: 1銘柄ごとの出現間隔
 let cosmosGraph = null;        // Graph instance / 'loading' / null
