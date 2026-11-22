@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CRAWLER ORB 3D — Cosmograph サンプルの立体版</title>
+<style>
+:root{--txt:#e2e8f0;--mut:#94a3b8;--line:rgba(148,163,184,.25)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;color:var(--txt);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:radial-gradient(1200px 800px at 70% 20%,#0d1530 0%,#05070f 45%,#02030a 100%)}
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#cv:active{cursor:grabbing}
+#labels{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:3}
+.lab{position:absolute;left:0;top:0;transform:translate(-50%,-130%);background:rgba(4,8,14,.82);border:1px solid rgba(148,163,184,.4);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;letter-spacing:.03em;white-space:nowrap;color:var(--txt);will-change:transform,opacity}
+.lab .d{font-weight:400;font-size:9.5px;color:#a5b4cc;margin-left:5px}
+.lab.held{border-color:rgba(251,191,36,.9);color:#fde68a;box-shadow:0 0 12px rgba(251,191,36,.45)}
+.lab.core{border-color:rgba(56,189,248,.8);color:#bae6fd}
+header{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:12px 16px;pointer-events:none}
+header .ttl{font-size:16px;font-weight:800;letter-spacing:.08em;text-shadow:0 0 14px rgba(56,189,248,.55)}
+header .ttl small{display:block;font-size:9.5px;font-weight:400;color:var(--mut);letter-spacing:.03em;margin-top:2px}
+header .cnt{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--mut);white-space:nowrap}
+#legend{position:fixed;left:12px;bottom:36px;z-index:5;background:rgba(8,12,22,.78);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:10.5px;line-height:1.75;max-width:300px;backdrop-filter:blur(3px)}
+#legend b{color:#7dd3fc;letter-spacing:.05em}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 3px 0 6px;vertical-align:0;box-shadow:0 0 6px currentColor}
+.dot:first-child{margin-left:0}
+footer{position:fixed;left:0;right:0;bottom:0;z-index:5;padding:6px 14px;font-size:10px;color:var(--mut);display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+#hint{position:fixed;right:12px;bottom:36px;z-index:5;font-size:10px;color:var(--mut);background:rgba(8,12,22,.6);border:1px solid var(--line);border-radius:999px;padding:4px 10px;pointer-events:none}
+@media (max-width:700px){ #legend{max-width:58vw;font-size:9.5px;padding:7px 9px} header .ttl{font-size:13px} .lab{font-size:10px;padding:1px 7px} #hint{display:none} }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="labels"></div>
+<header><div class="ttl">CRAWLER ORB 3D<small>銘柄ネットワークを立体オーブ化 · ドラッグで回転</small></div><div class="cnt" id="cnt"></div></header>
+<div id="legend"><b>凡例</b><br><span class="dot" style="background:#ef4444;color:#ef4444"></span>SHORT<span class="dot" style="background:#22c55e;color:#22c55e"></span>LONG<span class="dot" style="background:#94a3b8;color:#94a3b8"></span>HOLD<br>大きさ = シグナル強度（CHIEF系スコア）<br>金のリング＋強い発光 = 保有中ポジション<br>線の太さ・明るさ = 板の不均衡 |imbalance|<br>流れる光点 = CORE へのデータパケット</div>
+<div id="hint">ドラッグで回転 / 離すと自動回転に復帰</div>
+<footer><span id="stamp"></span><span>ペーパートレードのサンプル</span></footer>
+<script>
+'use strict';
+/* ===== DATA (embedded from results.json at build time) ===== */
+const DATA = {"generated": "2026-11-22 11:17:09 JST", "run": 81, "heldCount": 6, "nodes": [{"sym": "UNI", "dec": "HOLD", "color": "#94a3b8", "chief": 0.639, "chiefShort": 0.582, "strength": 0.639, "held": false, "side": "", "price": 4.7109, "rsi": 59, "linkW": 2.62, "linkA": 0.54, "linkSrc": "imbalance 0.63"}, {"sym": "NEAR", "dec": "HOLD", "color": "#94a3b8", "chief": 0.632, "chiefShort": 0.566, "strength": 0.632, "held": true, "side": "short", "price": 2.8919, "rsi": 57, "linkW": 2.81, "linkA": 0.57, "linkSrc": "imbalance 0.69"}, {"sym": "ETH", "dec": "HOLD", "color": "#94a3b8", "chief": 0.617, "chiefShort": 0.554, "strength": 0.617, "held": true, "side": "short", "price": 1678.92, "rsi": 56, "linkW": 3.24, "linkA": 0.63, "linkSrc": "imbalance 0.82"}, {"sym": "XRP", "dec": "HOLD", "color": "#94a3b8", "chief": 0.614, "chiefShort": 0.56, "strength": 0.614, "held": false, "side": "", "price": 0.92825, "rsi": 56, "linkW": 2.78, "linkA": 0.56, "linkSrc": "imbalance 0.68"}, {"sym": "DOGE", "dec": "SHORT", "color": "#ef4444", "chief": 0.612, "chiefShort": 0.661, "strength": 0.661, "held": true, "side": "short", "price": 0.0549277, "rsi": 54, "linkW": 2.63, "linkA": 0.54, "linkSrc": "imbalance 0.64"}, {"sym": "XLM", "dec": "SHORT", "color": "#ef4444", "chief": 0.606, "chiefShort": 0.696, "strength": 0.696, "held": false, "side": "", "price": 0.128113, "rsi": 51, "linkW": 2.7, "linkA": 0.55, "linkSrc": "imbalance 0.66"}, {"sym": "LINK", "dec": "SHORT", "color": "#ef4444", "chief": 0.603, "chiefShort": 0.708, "strength": 0.708, "held": true, "side": "short", "price": 8.53594, "rsi": 52, "linkW": 2.59, "linkA": 0.53, "linkSrc": "imbalance 0.62"}, {"sym": "ADA", "dec": "SHORT", "color": "#ef4444", "chief": 0.596, "chiefShort": 0.628, "strength": 0.628, "held": false, "side": "", "price": 0.143375, "rsi": 53, "linkW": 2.59, "linkA": 0.53, "linkSrc": "imbalance 0.62"}, {"sym": "BTC", "dec": "HOLD", "color": "#94a3b8", "chief": 0.588, "chiefShort": 0.592, "strength": 0.592, "held": false, "side": "", "price": 59793.5, "rsi": 55, "linkW": 1.12, "linkA": 0.3, "linkSrc": "imbalance 0.16"}, {"sym": "CRV", "dec": "SHORT", "color": "#ef4444", "chief": 0.569, "chiefShort": 0.74, "strength": 0.74, "held": true, "side": "short", "price": 0.17721, "rsi": 51, "linkW": 3.37, "linkA": 0.65, "linkSrc": "imbalance 0.87"}, {"sym": "SKY", "dec": "SHORT", "color": "#ef4444", "chief": 0.501, "chiefShort": 0.637, "strength": 0.637, "held": true, "side": "short", "price": 0.04393, "rsi": 49, "linkW": 2.85, "linkA": 0.57, "linkSrc": "imbalance 0.70"}, {"sym": "AKE", "dec": "HOLD", "color": "#94a3b8", "chief": 0.187, "chiefShort": 0.732, "strength": 0.732, "held": false, "side": "", "price": 0.00410774, "rsi": 33, "linkW": 2.31, "linkA": 0.49, "linkSrc": "imbalance 0.53"}]};
+
+/* ===== Setup ===== */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const labelWrap = document.getElementById('labels');
+const GOLD = '#fbbf24';
+const CORE_COLOR = '#38bdf8';
+let W = 0, H = 0, DPR = 1, sizeOk = false;
+
+function clamp(v, a, b){ return v < a ? a : (v > b ? b : v); }
+function hexRgb(hex){ const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function rgba(hex, a){ const c = hexRgb(hex); return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; }
+function fmtPrice(p){
+  if (p == null || !isFinite(p)) return '—';
+  if (p >= 1000) return '$' + p.toLocaleString('en-US', {maximumFractionDigits: 0});
+  if (p >= 1) return '$' + p.toFixed(2);
+  if (p >= 0.01) return '$' + p.toFixed(4);
+  return '$' + p.toPrecision(3);
+}
+
+/* ===== Pre-rendered glow / body sprites (per colour — no per-frame shadowBlur) ===== */
+function makeSprite(size, stops){
+  const c = document.createElement('canvas'); c.width = size; c.height = size;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  stops.forEach(s => gr.addColorStop(s[0], s[1]));
+  g.fillStyle = gr; g.fillRect(0, 0, size, size);
+  return c;
+}
+function glowSprite(hex){
+  return makeSprite(256, [
+    [0.0, rgba(hex, 0.85)], [0.18, rgba(hex, 0.42)], [0.45, rgba(hex, 0.16)], [1.0, rgba(hex, 0.0)]
+  ]);
+}
+function bodySprite(hex){
+  const c = document.createElement('canvas'); c.width = 128; c.height = 128;
+  const g = c.getContext('2d');
+  const rgb = hexRgb(hex);
+  const lite = 'rgb(' + Math.min(255, rgb[0]+110) + ',' + Math.min(255, rgb[1]+110) + ',' + Math.min(255, rgb[2]+110) + ')';
+  const dark = 'rgb(' + (rgb[0]*0.32|0) + ',' + (rgb[1]*0.32|0) + ',' + (rgb[2]*0.32|0) + ')';
+  const gr = g.createRadialGradient(45, 40, 4, 64, 64, 66);
+  gr.addColorStop(0.0, '#ffffff'); gr.addColorStop(0.25, lite); gr.addColorStop(0.62, hex); gr.addColorStop(1.0, dark);
+  g.fillStyle = gr; g.beginPath(); g.arc(64, 64, 63, 0, 6.2832); g.fill();
+  return c;
+}
+const SPRITES = {};
+function spritesFor(hex){
+  if (!SPRITES[hex]) SPRITES[hex] = { glow: glowSprite(hex), body: bodySprite(hex) };
+  return SPRITES[hex];
+}
+const bloomSprite = makeSprite(512, [
+  [0.0, 'rgba(56,120,248,0.20)'], [0.4, 'rgba(80,80,220,0.10)'], [1.0, 'rgba(60,60,200,0)']
+]);
+
+/* ===== Scene graph: fibonacci sphere ===== */
+const NCOINS = DATA.nodes.length;
+const GA = Math.PI * (3 - Math.sqrt(5));
+const nodes = [{ sym: 'CORE', dec: 'CORE', color: CORE_COLOR, core: true, held: false,
+                 strength: 1, x: 0, y: 0, z: 0, baseR: 30, linkW: 0, linkA: 0 }];
+DATA.nodes.forEach((nd, i) => {
+  const y = NCOINS > 1 ? 1 - (i / (NCOINS - 1)) * 2 : 0;
+  const rad = Math.sqrt(Math.max(0, 1 - y * y));
+  const th = GA * i;
+  const jr = 0.9 + 0.18 * nd.strength; /* radius jitter by signal strength */
+  nodes.push({
+    sym: nd.sym, dec: nd.dec, color: nd.color, core: false,
+    held: nd.held, side: nd.side, strength: nd.strength,
+    chief: nd.chief, chiefShort: nd.chiefShort, price: nd.price, rsi: nd.rsi,
+    linkW: nd.linkW, linkA: nd.linkA,
+    x: Math.cos(th) * rad * jr, y: y * jr, z: Math.sin(th) * rad * jr,
+    baseR: Math.max(10, 11 + nd.strength * 13)
+  });
+});
+const links = nodes.slice(1).map((nd, i) => ({
+  node: i + 1, w: nd.linkW, a: nd.linkA,
+  packets: [ { o: (i * 0.37) % 1, s: 0.10 + nd.linkW * 0.045 }, { o: (i * 0.37 + 0.52) % 1, s: 0.10 + nd.linkW * 0.045 } ]
+}));
+
+/* stars (deterministic) */
+let seed = 1234567;
+function rnd(){ seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+const STARS = [];
+for (let i = 0; i < 190; i++) STARS.push({ x: rnd(), y: rnd(), r: 0.4 + rnd() * 1.3, ph: rnd() * 6.283, sp: 0.6 + rnd() * 1.8 });
+
+/* ===== Labels ===== */
+const labelEls = nodes.map(nd => {
+  const el = document.createElement('div');
+  el.className = 'lab' + (nd.core ? ' core' : '') + (nd.held ? ' held' : '');
+  const main = document.createElement('span'); main.textContent = nd.sym;
+  const sub = document.createElement('span'); sub.className = 'd';
+  sub.textContent = nd.core ? 'デスク中枢' : (nd.dec + (nd.held ? ' · 保有中' : ''));
+  el.appendChild(main); el.appendChild(sub);
+  labelWrap.appendChild(el);
+  return el;
+});
+function labelPriority(nd){ return nd.core ? 1000 : (nd.held ? 500 : 0) + nd.strength * 100; }
+
+/* ===== Rotation / interaction state ===== */
+const state = { rotY: 0.6, rotX: 0.42, velY: 0, velX: 0, dragging: false, lastX: 0, lastY: 0, projected: [] };
+const AUTO_SPEED = 0.16; /* rad/s — slow continuous spin */
+function onDown(e){ state.dragging = true; state.lastX = e.clientX; state.lastY = e.clientY; state.velY = 0; state.velX = 0; try{ cv.setPointerCapture(e.pointerId); }catch(err){} }
+function onMove(e){
+  if (!state.dragging) return;
+  const dx = e.clientX - state.lastX, dy = e.clientY - state.lastY;
+  state.lastX = e.clientX; state.lastY = e.clientY;
+  state.velY = dx * 0.005; state.velX = dy * 0.005;
+  state.rotY += state.velY; state.rotX = clamp(state.rotX + state.velX, -0.5, 1.15);
+}
+function onUp(){ state.dragging = false; }
+cv.addEventListener('pointerdown', onDown);
+cv.addEventListener('pointermove', onMove);
+cv.addEventListener('pointerup', onUp);
+cv.addEventListener('pointercancel', onUp);
+
+/* ===== Resize ===== */
+function resize(){
+  const w = cv.clientWidth || 0, h = cv.clientHeight || 0;
+  if (w < 40 || h < 40){ sizeOk = false; return; }
+  DPR = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+  DPR = clamp(DPR, 1, 2);
+  if (w !== W || h !== H || cv.width !== Math.round(w * DPR)){
+    W = w; H = h;
+    cv.width = Math.round(w * DPR); cv.height = Math.round(h * DPR);
+  }
+  sizeOk = true;
+}
+if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', () => { resize(); kick(); });
+
+/* ===== Projection ===== */
+const FOCAL = 3.4;
+function project(x, y, z, cx, cy, orbR){
+  const s = FOCAL / (FOCAL + z);
+  return { x: cx + x * orbR * s, y: cy + y * orbR * s, s: s, z: z };
+}
+
+/* ===== Paint ===== */
+let bgGrad = null, bgW = 0, bgH = 0;
+function paint(now){
+  resize();
+  if (!sizeOk || W < 40 || H < 40) return;
+  const t = now / 1000;
+  const dt = paint.last ? clamp((now - paint.last) / 1000, 0.001, 0.05) : 0.016;
+  paint.last = now;
+
+  if (!state.dragging){
+    state.rotY += (AUTO_SPEED + state.velY) * dt;
+    state.rotX = clamp(state.rotX + state.velX * dt, -0.5, 1.15);
+    state.velY *= Math.pow(0.12, dt); state.velX *= Math.pow(0.12, dt);
+    if (Math.abs(state.velY) < 0.0005) state.velY = 0;
+    if (Math.abs(state.velX) < 0.0005) state.velX = 0;
+  }
+  const cy1 = Math.cos(state.rotY), sy1 = Math.sin(state.rotY);
+  const cx1 = Math.cos(state.rotX), sx1 = Math.sin(state.rotX);
+  const cx = W / 2, cy = H / 2 + 8;
+  const orbR = Math.min(W, H) * 0.355;
+
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+  /* space background */
+  if (!bgGrad || bgW !== W || bgH !== H){
+    bgGrad = ctx.createRadialGradient(cx, cy * 0.85, 40, cx, cy, Math.max(W, H) * 0.75);
+    bgGrad.addColorStop(0, '#0a1128'); bgGrad.addColorStop(0.45, '#05070f'); bgGrad.addColorStop(1, '#02030a');
+    bgW = W; bgH = H;
+  }
+  ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < STARS.length; i++){
+    const st = STARS[i];
+    const tw = 0.35 + 0.65 * Math.abs(Math.sin(t * st.sp + st.ph));
+    ctx.globalAlpha = tw * 0.85;
+    ctx.fillStyle = '#dbeafe';
+    ctx.beginPath(); ctx.arc(st.x * W, st.y * H, st.r, 0, 6.2832); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  /* overall bloom behind the orb */
+  const bloomR = orbR * 3.1;
+  ctx.globalAlpha = 0.85;
+  ctx.drawImage(bloomSprite, cx - bloomR / 2, cy - bloomR / 2, bloomR, bloomR);
+  ctx.globalAlpha = 1;
+
+  /* rotate + project all nodes */
+  const proj = nodes.map(nd => {
+    const x1 = nd.x * cy1 + nd.z * sy1;
+    const z1 = -nd.x * sy1 + nd.z * cy1;
+    const y2 = nd.y * cx1 - z1 * sx1;
+    const z2 = nd.y * sx1 + z1 * cx1;
+    const p = project(x1, y2, z2, cx, cy, orbR);
+    p.nd = nd;
+    p.front = clamp((1 - (z2 + 1.15) / 2.3), 0, 1); /* 1 = front */
+    return p;
+  });
+  state.projected = proj;
+  const core = proj[0];
+
+  /* faint sphere shell */
+  ctx.strokeStyle = 'rgba(125,180,255,0.13)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx, cy, orbR * (FOCAL / (FOCAL - 0)) * 0.99, 0, 6.2832); ctx.stroke();
+
+  /* radar sweep (screen space, under nodes) */
+  const sweepA = (t * 0.55) % 6.2832;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, orbR * 0.99, sweepA - 0.38, sweepA);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(56,189,248,0.05)'; ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(sweepA) * orbR * 0.99, cy + Math.sin(sweepA) * orbR * 0.99);
+  ctx.strokeStyle = 'rgba(56,189,248,0.30)'; ctx.lineWidth = 1.2; ctx.stroke();
+
+  /* links with a faint glow pass + core pass */
+  links.forEach(L => {
+    const p = proj[L.node];
+    const depthA = 0.35 + 0.65 * p.front;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(core.x, core.y); ctx.lineTo(p.x, p.y);
+    ctx.strokeStyle = rgba(p.nd.color, 0.05 * depthA); ctx.lineWidth = Math.max(1, L.w * 3.4 * p.s); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(core.x, core.y); ctx.lineTo(p.x, p.y);
+    ctx.strokeStyle = rgba(p.nd.color, L.a * depthA); ctx.lineWidth = Math.max(0.6, L.w * p.s); ctx.stroke();
+  });
+
+  /* packets: bright glowing dots with trails */
+  links.forEach(L => {
+    const p = proj[L.node];
+    const spr = spritesFor(p.nd.color).glow;
+    L.packets.forEach(pk => {
+      const tt = (t * pk.s + pk.o) % 1;
+      for (let k = 4; k >= 0; k--){
+        const u = tt - k * 0.028;
+        if (u < 0) continue;
+        const px = core.x + (p.x - core.x) * u, py = core.y + (p.y - core.y) * u;
+        const sz = (k === 0 ? 15 : 9 - k) * p.s * (0.5 + 0.5 * p.front);
+        if (sz <= 0.5) continue;
+        ctx.globalAlpha = (k === 0 ? 0.95 : 0.4 - k * 0.08) * (0.4 + 0.6 * p.front);
+        ctx.drawImage(spr, px - sz / 2, py - sz / 2, sz, sz);
+        if (k === 0){
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath(); ctx.arc(px, py, Math.max(0.8, 1.5 * p.s), 0, 6.2832); ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+    });
+  });
+
+  /* nodes, far -> near (painter's sort) */
+  const order = proj.slice().sort((a, b) => b.z - a.z);
+  order.forEach(p => {
+    const nd = p.nd;
+    const spr = spritesFor(nd.color);
+    const pulse = nd.held ? 1 + 0.10 * Math.sin(t * 3 + p.x * 0.01) : 1;
+    const R = Math.max(1.5, nd.baseR * p.s * pulse);
+    const nodeAlpha = nd.core ? 1 : 0.5 + 0.5 * p.front;
+
+    /* halo — bigger and brighter on the front side; held nodes much stronger */
+    const glowScale = nd.core ? 7.5 : (nd.held ? 5.6 + 0.8 * Math.sin(t * 2.2 + p.y * 0.02) : 3.6);
+    const glowSize = R * 2 * glowScale * (0.55 + 0.45 * p.front);
+    ctx.globalAlpha = (nd.core ? 0.95 : (0.35 + 0.65 * p.front) * (nd.held ? 1.0 : 0.8)) * nodeAlpha;
+    ctx.drawImage(spr.glow, p.x - glowSize / 2, p.y - glowSize / 2, glowSize, glowSize);
+    ctx.globalAlpha = 1;
+
+    /* held: expanding rings */
+    if (nd.held){
+      for (let rI = 0; rI < 2; rI++){
+        const ph = (t * 0.45 + rI * 0.5 + (p.nd.strength || 0)) % 1;
+        const rr = Math.max(1, R * (1.25 + ph * 1.7));
+        ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, 6.2832);
+        ctx.strokeStyle = rgba(GOLD, (1 - ph) * 0.55 * nodeAlpha); ctx.lineWidth = 1.8; ctx.stroke();
+      }
+    }
+    /* core: rotating dashed orbit ring */
+    if (nd.core){
+      ctx.save();
+      ctx.translate(p.x, p.y); ctx.rotate(t * 0.4);
+      ctx.beginPath(); ctx.arc(0, 0, R * 1.55, 0, 6.2832);
+      ctx.strokeStyle = rgba(CORE_COLOR, 0.5); ctx.lineWidth = 1.2;
+      ctx.setLineDash([6, 9]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    /* glossy body */
+    ctx.globalAlpha = nodeAlpha;
+    ctx.drawImage(spr.body, p.x - R, p.y - R, R * 2, R * 2);
+    ctx.globalAlpha = 1;
+
+    /* depth shading for far side */
+    if (!nd.core && p.front < 0.6){
+      ctx.fillStyle = 'rgba(2,4,10,' + ((0.6 - p.front) * 0.55).toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, 6.2832); ctx.fill();
+    }
+    /* gold ring for held */
+    if (nd.held){
+      ctx.beginPath(); ctx.arc(p.x, p.y, R + 1.5, 0, 6.2832);
+      ctx.strokeStyle = rgba(GOLD, 0.95 * nodeAlpha); ctx.lineWidth = 2.2; ctx.stroke();
+    }
+  });
+
+  /* labels with simple overlap avoidance */
+  const placed = [];
+  const byPrio = proj.slice().sort((a, b) => labelPriority(b.nd) - labelPriority(a.nd));
+  byPrio.forEach(p => {
+    const idx = proj.indexOf(p);
+    const el = labelEls[idx];
+    const R = Math.max(1.5, p.nd.baseR * p.s);
+    const lw = el.offsetWidth || 74, lh = el.offsetHeight || 20;
+    let bx = p.x - lw / 2, by = p.y - R - lh - 8;
+    const tries = [0, -18, 18, -36, 36, -54, 54];
+    let chosen = by;
+    for (let ti = 0; ti < tries.length; ti++){
+      const yy = by + tries[ti];
+      let hit = false;
+      for (let pj = 0; pj < placed.length; pj++){
+        const q = placed[pj];
+        if (bx < q.x + q.w && bx + lw > q.x && yy < q.y + q.h && yy + lh > q.y){ hit = true; break; }
+      }
+      chosen = yy;
+      if (!hit) break;
+    }
+    placed.push({ x: bx, y: chosen, w: lw, h: lh });
+    el.style.transform = 'translate(' + bx.toFixed(1) + 'px,' + chosen.toFixed(1) + 'px)';
+    el.style.opacity = p.nd.core ? '1' : (0.4 + 0.6 * p.front).toFixed(2);
+  });
+}
+
+/* ===== Animation loop (robust: next frame scheduled BEFORE painting) ===== */
+let rafId = null, running = false;
+function frame(now){
+  rafId = requestAnimationFrame(frame);
+  if (typeof document !== 'undefined' && document.hidden) return;
+  try { paint(now || 0); } catch (e) { /* never let one bad frame kill the loop */ }
+}
+function kick(){
+  if (!running){ running = true; rafId = requestAnimationFrame(frame); }
+}
+if (typeof document !== 'undefined' && document.addEventListener){
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) kick(); });
+}
+
+/* ===== Header / footer ===== */
+document.getElementById('cnt').textContent = 'NODES ' + nodes.length + ' / LINKS ' + links.length + ' · RUN ' + DATA.run;
+document.getElementById('stamp').textContent = 'データ: ' + DATA.generated + ' スキャン（results.json）';
+
+resize();
+kick();
+if (typeof window !== 'undefined') window.__orbState = state;
+</script>
+</body>
+</html>
