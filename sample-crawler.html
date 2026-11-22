@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SAMPLE 1 — CRAWLER NETWORK（Cosmograph）</title>
+<style>
+:root{--bg:#0b0f14;--txt:#e2e8f0;--mut:#94a3b8;--line:rgba(148,163,184,.25)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;overflow:hidden}
+#stage{position:fixed;inset:0}
+#cosmosDiv{position:absolute;inset:0}
+#cosmosDiv canvas{display:block}
+#labels{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:3}
+.lab{position:absolute;left:0;top:0;transform:translate(-50%,-50%);text-align:center;pointer-events:none;will-change:transform}
+.lab .t{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--txt);text-shadow:0 1px 4px #000,0 0 8px rgba(0,0,0,.8);white-space:nowrap}
+.lab .s{font-size:9px;color:var(--mut);text-shadow:0 1px 3px #000;white-space:nowrap}
+header{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:10px 14px;pointer-events:none}
+header .ttl{font-size:14px;font-weight:700;letter-spacing:.06em}
+header .ttl small{display:block;font-size:9.5px;font-weight:400;color:var(--mut);letter-spacing:.02em}
+header .cnt{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--mut);white-space:nowrap}
+#legend{position:absolute;left:12px;bottom:34px;z-index:5;background:rgba(10,14,20,.78);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:10.5px;line-height:1.75;color:var(--txt);max-width:300px;backdrop-filter:blur(3px)}
+#legend b{color:#7dd3fc;letter-spacing:.05em}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 3px 0 6px;vertical-align:0}
+.dot:first-child{margin-left:0}
+footer{position:absolute;left:0;right:0;bottom:0;z-index:5;padding:6px 14px;font-size:10px;color:var(--mut);display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+#tip{position:absolute;z-index:6;pointer-events:none;background:rgba(8,12,18,.92);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:11px;line-height:1.6;display:none;max-width:260px}
+#tip .tt{font-weight:700}
+#nogl{position:absolute;inset:0;z-index:9;display:none;place-items:center;text-align:center;color:var(--mut);font-size:13px;padding:20px}
+@media (max-width:700px){ #legend{max-width:56vw;font-size:9.5px;padding:7px 9px;bottom:40px} header .ttl{font-size:12px} .lab .t{font-size:10px} }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="cosmosDiv"></div>
+  <div id="labels"></div>
+  <header><div class="ttl">SAMPLE 1 — CRAWLER NETWORK（Cosmograph）<small>銘柄ネットワーク · CORE から各銘柄へ</small></div><div class="cnt" id="cnt"></div></header>
+  <div id="legend"><b>凡例</b><br><span class="dot" style="background:#ef4444"></span>SHORT<span class="dot" style="background:#22c55e"></span>LONG<span class="dot" style="background:#64748b"></span>HOLD<br>大きさ = シグナル強度（CHIEF系スコア）<br>金のリング = 保有中ポジション<br>線の太さ = 板の不均衡 |imbalance|<br>ノードにホバーで詳細表示</div>
+  <div id="tip"></div>
+  <div id="nogl"><div>このサンプルの表示には WebGL2 対応ブラウザが必要です。</div></div>
+  <footer><span>データ: 2026-11-22 11:17:09 JST スキャン（results.json）</span><span>ペーパートレードのサンプル</span></footer>
+</div>
+<script>
+
+const DATA = {"nodes": [{"x": 2048, "y": 2048, "color": ["#38bdf8", 1], "size": 30, "stroke": ["#e0f2fe", 0], "strokeW": 0, "label": "CORE", "sub": "デスク中枢", "tip": ["CORE — ペーパーデスク中枢", "銘柄 12 / 保有 6"]}, {"x": 2048.0, "y": 1488.0, "color": ["#64748b", 1], "size": 30.4, "stroke": ["#05070a", 0], "strokeW": 0, "label": "BTC", "sub": "HOLD", "tip": ["BTC — HOLD", "価格 $60K / RSI 55", "CHIEF 0.59 / SHORT 0.59", "未保有", "板の不均衡 0.16"]}, {"x": 2328.0, "y": 1563.0257738807143, "color": ["#64748b", 1], "size": 41.9, "stroke": ["#fbbf24", 1], "strokeW": 3.5, "label": "ETH", "sub": "HOLD · 保有中", "tip": ["ETH — HOLD", "価格 $2K / RSI 56", "CHIEF 0.62 / SHORT 0.55", "保有中: short", "板の不均衡 0.82"]}, {"x": 2532.9742261192855, "y": 1768.0, "color": ["#64748b", 1], "size": 31.0, "stroke": ["#05070a", 0], "strokeW": 0, "label": "XRP", "sub": "HOLD", "tip": ["XRP — HOLD", "価格 $1 / RSI 56", "CHIEF 0.61 / SHORT 0.56", "未保有", "板の不均衡 0.68"]}, {"x": 2608.0, "y": 2048.0, "color": ["#ef4444", 1], "size": 31.3, "stroke": ["#05070a", 0], "strokeW": 0, "label": "ADA", "sub": "SHORT", "tip": ["ADA — SHORT", "価格 $0 / RSI 53", "CHIEF 0.60 / SHORT 0.63", "未保有", "板の不均衡 0.62"]}, {"x": 2532.9742261192855, "y": 2328.0, "color": ["#ef4444", 1], "size": 43.5, "stroke": ["#fbbf24", 1], "strokeW": 3.5, "label": "DOGE", "sub": "SHORT · 保有中", "tip": ["DOGE — SHORT", "価格 $0 / RSI 54", "CHIEF 0.61 / SHORT 0.66", "保有中: short", "板の不均衡 0.64"]}, {"x": 2328.0, "y": 2532.9742261192855, "color": ["#ef4444", 1], "size": 46.2, "stroke": ["#fbbf24", 1], "strokeW": 3.5, "label": "CRV", "sub": "SHORT · 保有中", "tip": ["CRV — SHORT", "価格 $0 / RSI 51", "CHIEF 0.57 / SHORT 0.74", "保有中: short", "板の不均衡 0.87"]}, {"x": 2048.0, "y": 2608.0, "color": ["#ef4444", 1], "size": 45.1, "stroke": ["#fbbf24", 1], "strokeW": 3.5, "label": "LINK", "sub": "SHORT · 保有中", "tip": ["LINK — SHORT", "価格 $9 / RSI 52", "CHIEF 0.60 / SHORT 0.71", "保有中: short", "板の不均衡 0.62"]}, {"x": 1768.0, "y": 2532.9742261192855, "color": ["#64748b", 1], "size": 31.6, "stroke": ["#05070a", 0], "strokeW": 0, "label": "UNI", "sub": "HOLD", "tip": ["UNI — HOLD", "価格 $5 / RSI 59", "CHIEF 0.64 / SHORT 0.58", "未保有", "板の不均衡 0.63"]}, {"x": 1563.0257738807145, "y": 2328.0, "color": ["#ef4444", 1], "size": 33.1, "stroke": ["#05070a", 0], "strokeW": 0, "label": "XLM", "sub": "SHORT", "tip": ["XLM — SHORT", "価格 $0 / RSI 51", "CHIEF 0.61 / SHORT 0.70", "未保有", "板の不均衡 0.66"]}, {"x": 1488.0, "y": 2048.0, "color": ["#64748b", 1], "size": 42.4, "stroke": ["#fbbf24", 1], "strokeW": 3.5, "label": "NEAR", "sub": "HOLD · 保有中", "tip": ["NEAR — HOLD", "価格 $3 / RSI 57", "CHIEF 0.63 / SHORT 0.57", "保有中: short", "板の不均衡 0.69"]}, {"x": 1563.025773880714, "y": 1768.0000000000005, "color": ["#ef4444", 1], "size": 42.6, "stroke": ["#fbbf24", 1], "strokeW": 3.5, "label": "SKY", "sub": "SHORT · 保有中", "tip": ["SKY — SHORT", "価格 $0 / RSI 49", "CHIEF 0.50 / SHORT 0.64", "保有中: short", "板の不均衡 0.70"]}, {"x": 1767.9999999999998, "y": 1563.0257738807145, "color": ["#64748b", 1], "size": 34.0, "stroke": ["#05070a", 0], "strokeW": 0, "label": "AKE", "sub": "HOLD", "tip": ["AKE — HOLD", "価格 $0 / RSI 33", "CHIEF 0.19 / SHORT 0.73", "未保有", "板の不均衡 0.53"]}], "links": [{"a": 0, "b": 1, "color": ["#38bdf8", 0.4], "width": 1.12, "strength": 1}, {"a": 0, "b": 2, "color": ["#38bdf8", 0.4], "width": 3.24, "strength": 1}, {"a": 0, "b": 3, "color": ["#38bdf8", 0.4], "width": 2.78, "strength": 1}, {"a": 0, "b": 4, "color": ["#38bdf8", 0.4], "width": 2.59, "strength": 1}, {"a": 0, "b": 5, "color": ["#38bdf8", 0.4], "width": 2.63, "strength": 1}, {"a": 0, "b": 6, "color": ["#38bdf8", 0.4], "width": 3.37, "strength": 1}, {"a": 0, "b": 7, "color": ["#38bdf8", 0.4], "width": 2.59, "strength": 1}, {"a": 0, "b": 8, "color": ["#38bdf8", 0.4], "width": 2.62, "strength": 1}, {"a": 0, "b": 9, "color": ["#38bdf8", 0.4], "width": 2.7, "strength": 1}, {"a": 0, "b": 10, "color": ["#38bdf8", 0.4], "width": 2.81, "strength": 1}, {"a": 0, "b": 11, "color": ["#38bdf8", 0.4], "width": 2.85, "strength": 1}, {"a": 0, "b": 12, "color": ["#38bdf8", 0.4], "width": 2.31, "strength": 1}]};
+const CENTER = 2048;
+function rgba(hex, a){ const n = parseInt(hex.slice(1), 16); return [((n>>16)&255)/255, ((n>>8)&255)/255, (n&255)/255, a]; }
+const N = DATA.nodes.length;
+const POS = new Float32Array(N*2), PC = new Float32Array(N*4), PS = new Float32Array(N), SC = new Float32Array(N*4), SW = new Float32Array(N);
+const LNK = [], LCOL = [], LWID = [], LSTR = [];
+const ADJ = DATA.nodes.map(()=>new Set());
+DATA.nodes.forEach((nd,i)=>{ POS[i*2]=nd.x; POS[i*2+1]=nd.y; PC.set(rgba(nd.color[0], nd.color[1]), i*4); PS[i]=nd.size; SC.set(rgba(nd.stroke[0], nd.stroke[1]), i*4); SW[i]=nd.strokeW; });
+DATA.links.forEach(L=>{ LNK.push(L.a, L.b); LCOL.push(...rgba(L.color[0], L.color[1])); LWID.push(L.width); LSTR.push(L.strength); ADJ[L.a].add(L.b); ADJ[L.b].add(L.a); });
+const basePC = PC.slice(), baseLC = Float32Array.from(LCOL), baseLW = Float32Array.from(LWID);
+let graph = null, hoverIdx = null;
+const labelEls = [], screenPos = new Array(N).fill(null);
+function buildLabels(){
+  const wrap = document.getElementById('labels');
+  DATA.nodes.forEach((nd,i)=>{
+    const el = document.createElement('div'); el.className = 'lab';
+    el.innerHTML = '<div class="t"></div><div class="s"></div>';
+    el.querySelector('.t').textContent = nd.label;
+    el.querySelector('.s').textContent = nd.sub || '';
+    el.style.display = 'none';
+    wrap.appendChild(el); labelEls[i] = el;
+  });
+}
+function setHover(idx){
+  if(idx === hoverIdx) return; hoverIdx = idx;
+  const tip = document.getElementById('tip');
+  if(!graph) return;
+  if(idx == null){
+    graph.setPointColors(basePC); graph.setLinkColors(baseLC); graph.setLinkWidths(baseLW);
+    tip.style.display = 'none';
+  }else{
+    const pc = basePC.slice(), lc = baseLC.slice(), lw = baseLW.slice();
+    for(let i=0;i<N;i++){ if(i !== idx && !ADJ[idx].has(i)){ pc[i*4+3] = basePC[i*4+3]*0.12; } }
+    for(let k=0;k<DATA.links.length;k++){
+      const L = DATA.links[k];
+      if(L.a === idx || L.b === idx){ lc[k*4+3] = Math.min(1, baseLC[k*4+3]*1.6 + 0.25); lw[k] = baseLW[k]*1.7; }
+      else { lc[k*4+3] = baseLC[k*4+3]*0.1; }
+    }
+    graph.setPointColors(pc); graph.setLinkColors(lc); graph.setLinkWidths(lw);
+    const nd = DATA.nodes[idx];
+    tip.innerHTML = '<div class="tt"></div>' + nd.tip.slice(1).map(t=>'<div></div>').join('');
+    tip.querySelector('.tt').textContent = nd.tip[0] || nd.label;
+    const rows = tip.querySelectorAll('div:not(.tt)');
+    nd.tip.slice(1).forEach((t,j)=>{ if(rows[j]) rows[j].textContent = t; });
+    tip.style.display = 'block';
+  }
+  try{ graph.render(undefined, 0); }catch(e){}
+}
+function labelLoop(){
+  requestAnimationFrame(labelLoop);
+  if(!graph) return;
+  let map = null;
+  try{ map = graph.getTrackedPointPositionsMap(); }catch(e){ return; }
+  if(!map || !map.size) return;
+  map.forEach((pos, idx)=>{
+    const el = labelEls[idx]; if(!el) return;
+    if(!pos || !isFinite(pos[0]) || !isFinite(pos[1])){ el.style.display = 'none'; screenPos[idx] = null; return; }
+    const sp = graph.spaceToScreenPosition(pos);
+    screenPos[idx] = sp;
+    el.style.display = '';
+    el.style.transform = 'translate(' + sp[0].toFixed(1) + 'px,' + sp[1].toFixed(1) + 'px) translate(-50%,-50%)';
+    if(idx === hoverIdx){
+      const tip = document.getElementById('tip');
+      tip.style.left = Math.min(window.innerWidth - 270, sp[0] + 18) + 'px';
+      tip.style.top = Math.max(8, sp[1] - 20) + 'px';
+    }
+  });
+}
+async function init(){
+  try{
+    const probe = document.createElement('canvas');
+    if(!probe.getContext('webgl2')) throw new Error('WebGL2 unavailable');
+    const mod = await Promise.race([
+      import('./cosmos.bundle.js'),
+      new Promise((_, rej)=>setTimeout(()=>rej(new Error('bundle timeout')), 15000))
+    ]);
+    if(!mod || !mod.Graph) throw new Error('Graph export missing');
+    const g = new mod.Graph(document.getElementById('cosmosDiv'), {
+      backgroundColor: '#0b0f14',
+      scalePointsOnZoom: false,
+      transitionDuration: 0,
+      randomSeed: 1234,
+      simulationGravity: 0.03,
+      simulationRepulsion: 0.9,
+      simulationLinkSpring: 1.0,
+      simulationLinkDistance: 300,
+      simulationLinkDistRandomVariationRange: [0.55, 1.45],
+      simulationFriction: 0.8,
+      simulationCollision: 1,
+      simulationCollisionPadding: 8,
+      simulationDecay: 100000,
+      fitViewOnInit: false,
+      curvedLinks: false,
+      linkDefaultArrows: false,
+      enableZoom: true,
+      enableDrag: true,
+      onPointMouseOver: (i)=>{ if(typeof i === 'number') setHover(i); },
+      onPointMouseOut: ()=>setHover(null)
+    });
+    graph = g;
+    await g.ready;
+    g.setPointPositions(POS, true);
+    g.setPointColors(PC); g.setPointSizes(PS);
+    g.setPointStrokeColors(SC); g.setPointStrokeWidths(SW);
+    g.setLinks(Float32Array.from(LNK)); g.setLinkColors(baseLC); g.setLinkWidths(baseLW); g.setLinkStrength(Float32Array.from(LSTR));
+    g.render(undefined, 0);
+    try{ g.trackPointPositionsByIndices(DATA.nodes.map((_,i)=>i)); }catch(e){}
+    try{ g.fitView(700, 0.14); }catch(e){}
+    buildLabels();
+    requestAnimationFrame(labelLoop);
+    document.getElementById('cnt').textContent = 'NODES ' + N + ' / LINKS ' + DATA.links.length;
+  }catch(e){
+    console.warn('cosmos unavailable:', e);
+    const n = document.getElementById('nogl'); n.style.display = 'grid';
+  }
+}
+init();
+
+</script>
+</body>
+</html>

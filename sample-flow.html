@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SAMPLE 2 — MONEY FLOW（Cosmograph）</title>
+<style>
+:root{--bg:#0b0f14;--txt:#e2e8f0;--mut:#94a3b8;--line:rgba(148,163,184,.25)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;overflow:hidden}
+#stage{position:fixed;inset:0}
+#cosmosDiv{position:absolute;inset:0}
+#cosmosDiv canvas{display:block}
+#labels{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:3}
+.lab{position:absolute;left:0;top:0;transform:translate(-50%,-50%);text-align:center;pointer-events:none;will-change:transform}
+.lab .t{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--txt);text-shadow:0 1px 4px #000,0 0 8px rgba(0,0,0,.8);white-space:nowrap}
+.lab .s{font-size:9px;color:var(--mut);text-shadow:0 1px 3px #000;white-space:nowrap}
+header{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:10px 14px;pointer-events:none}
+header .ttl{font-size:14px;font-weight:700;letter-spacing:.06em}
+header .ttl small{display:block;font-size:9.5px;font-weight:400;color:var(--mut);letter-spacing:.02em}
+header .cnt{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--mut);white-space:nowrap}
+#legend{position:absolute;left:12px;bottom:34px;z-index:5;background:rgba(10,14,20,.78);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:10.5px;line-height:1.75;color:var(--txt);max-width:300px;backdrop-filter:blur(3px)}
+#legend b{color:#7dd3fc;letter-spacing:.05em}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 3px 0 6px;vertical-align:0}
+.dot:first-child{margin-left:0}
+footer{position:absolute;left:0;right:0;bottom:0;z-index:5;padding:6px 14px;font-size:10px;color:var(--mut);display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+#tip{position:absolute;z-index:6;pointer-events:none;background:rgba(8,12,18,.92);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:11px;line-height:1.6;display:none;max-width:260px}
+#tip .tt{font-weight:700}
+#nogl{position:absolute;inset:0;z-index:9;display:none;place-items:center;text-align:center;color:var(--mut);font-size:13px;padding:20px}
+@media (max-width:700px){ #legend{max-width:56vw;font-size:9.5px;padding:7px 9px;bottom:40px} header .ttl{font-size:12px} .lab .t{font-size:10px} }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="cosmosDiv"></div>
+  <div id="labels"></div>
+  <header><div class="ttl">SAMPLE 2 — MONEY FLOW（Cosmograph）<small>マネーフロー · BTC / ETH ハブと資金の流れ</small></div><div class="cnt" id="cnt"></div></header>
+  <div id="legend"><b>凡例</b><br><span class="dot" style="background:#22c55e"></span>流入（プラス）<span class="dot" style="background:#ef4444"></span>流出・売り圧力<br>大きさ / 線の太さ = 金額の大きさ（対数）<br>ETF = 米現物ETFフロー（Farside）<br>清算 = OKX 直近ウィンドウ全銘柄集計<br>純フロー = 流出 − 流入（オンチェーン）</div>
+  <div id="tip"></div>
+  <div id="nogl"><div>このサンプルの表示には WebGL2 対応ブラウザが必要です。</div></div>
+  <footer><span>データ: 2026-11-22 11:17:09 JST スキャン（results.json）</span><span>ペーパートレードのサンプル</span></footer>
+</div>
+<script>
+
+const DATA = {"nodes": [{"x": 1600, "y": 2048, "color": ["#fbbf24", 1], "size": 34, "stroke": ["#e0f2fe", 0], "strokeW": 0, "label": "BTC", "sub": "ハブ", "tip": ["BTC ハブ", "価格 $60K", "判定 HOLD"]}, {"x": 2500, "y": 2048, "color": ["#a78bfa", 1], "size": 34, "stroke": ["#e0f2fe", 0], "strokeW": 0, "label": "ETH", "sub": "ハブ", "tip": ["ETH ハブ", "価格 $2K", "判定 HOLD"]}, {"x": 1600.0, "y": 1578.0, "color": ["#ef4444", 1], "size": 34.1, "stroke": ["#05070a", 0], "strokeW": 0, "label": "ETF 日次", "sub": "2026-11-19 -$582.3M", "tip": ["ETF 日次 — 2026-11-19 -$582.3M", "米現物ETF 純フロー（直近確定日）", "対象ハブ: BTC"]}, {"x": 1902.1101765526735, "y": 1687.9591117340804, "color": ["#ef4444", 1], "size": 36.9, "stroke": ["#05070a", 0], "strokeW": 0, "label": "ETF 5日累計", "sub": "-$1.31B", "tip": ["ETF 5日累計 — -$1.31B", "米現物ETF 5営業日累計", "対象ハブ: BTC"]}, {"x": 2062.8596439157377, "y": 1966.3853564965427, "color": ["#22c55e", 1], "size": 39.1, "stroke": ["#05070a", 0], "strokeW": 0, "label": "取引所 流入", "sub": "$2.43B", "tip": ["取引所 流入 — $2.43B", "オンチェーン: 取引所への入金 (2026-11-20)", "対象ハブ: BTC"]}, {"x": 2007.0319397786861, "y": 2283.0, "color": ["#ef4444", 1], "size": 39.1, "stroke": ["#05070a", 0], "strokeW": 0, "label": "取引所 流出", "sub": "$2.46B", "tip": ["取引所 流出 — $2.46B", "オンチェーン: 取引所からの出金 (2026-11-20)", "対象ハブ: BTC"]}, {"x": 1760.7494673630645, "y": 2489.655531769377, "color": ["#ef4444", 1], "size": 23.9, "stroke": ["#05070a", 0], "strokeW": 0, "label": "純フロー", "sub": "+$30.3M（純流出）", "tip": ["純フロー — +$30.3M（純流出）", "流出 − 流入", "対象ハブ: BTC"]}, {"x": 1439.2505326369358, "y": 2489.655531769377, "color": ["#ef4444", 1], "size": 13.0, "stroke": ["#05070a", 0], "strokeW": 0, "label": "ロング清算", "sub": "$1.3M", "tip": ["ロング清算 — $1.3M", "全12銘柄集計 · 直近ウィンドウ", "対象ハブ: BTC"]}, {"x": 1192.9680602213139, "y": 2283.0, "color": ["#22c55e", 1], "size": 13.9, "stroke": ["#05070a", 0], "strokeW": 0, "label": "ショート清算", "sub": "$1.7M", "tip": ["ショート清算 — $1.7M", "全12銘柄集計 · 直近ウィンドウ", "対象ハブ: BTC"]}, {"x": 1137.1403560842623, "y": 1966.385356496543, "color": ["#ef4444", 1], "size": 25.4, "stroke": ["#05070a", 0], "strokeW": 0, "label": "吸収力クラスター 下方", "sub": "@$57.5K $47.6M", "tip": ["吸収力クラスター 下方 — @$57.5K $47.6M", "BTC吸収力モニター最大クラスター", "対象ハブ: BTC"]}, {"x": 1297.8898234473263, "y": 1687.9591117340804, "color": ["#22c55e", 1], "size": 24.2, "stroke": ["#05070a", 0], "strokeW": 0, "label": "吸収力クラスター 上方", "sub": "@$64.5K $33.3M", "tip": ["吸収力クラスター 上方 — @$64.5K $33.3M", "BTC吸収力モニター最大クラスター", "対象ハブ: BTC"]}, {"x": 2638.8944971308297, "y": 1598.991850110965, "color": ["#ef4444", 1], "size": 28.9, "stroke": ["#05070a", 0], "strokeW": 0, "label": "ETF 日次", "sub": "2026-11-19 -$131.2M", "tip": ["ETF 日次 — 2026-11-19 -$131.2M", "米現物ETF 純フロー（直近確定日）", "対象ハブ: ETH"]}, {"x": 2969.9528868601865, "y": 2041.3453676452486, "color": ["#ef4444", 1], "size": 30.5, "stroke": ["#05070a", 0], "strokeW": 0, "label": "ETF 5日累計", "sub": "-$206.2M", "tip": ["ETF 5日累計 — -$206.2M", "米現物ETF 5営業日累計", "対象ハブ: ETH"]}, {"x": 2651.5523600598995, "y": 2492.8953609111636, "color": ["#22c55e", 1], "size": 34.9, "stroke": ["#05070a", 0], "strokeW": 0, "label": "取引所 流入", "sub": "$724.0M", "tip": ["取引所 流入 — $724.0M", "オンチェーン: 取引所への入金 (2026-11-20)", "対象ハブ: ETH"]}, {"x": 2123.7116227320935, "y": 2329.6150868350023, "color": ["#ef4444", 1], "size": 34.0, "stroke": ["#05070a", 0], "strokeW": 0, "label": "取引所 流出", "sub": "$566.8M", "tip": ["取引所 流出 — $566.8M", "オンチェーン: 取引所からの出金 (2026-11-20)", "対象ハブ: ETH"]}, {"x": 2115.888633216991, "y": 1777.1523344976208, "color": ["#22c55e", 1], "size": 29.6, "stroke": ["#05070a", 0], "strokeW": 0, "label": "純フロー", "sub": "-$157.2M（純流入）", "tip": ["純フロー — -$157.2M（純流入）", "流出 − 流入", "対象ハブ: ETH"]}], "links": [{"a": 0, "b": 2, "color": ["#ef4444", 0.45], "width": 3.44, "strength": 1}, {"a": 0, "b": 3, "color": ["#ef4444", 0.45], "width": 3.75, "strength": 1}, {"a": 0, "b": 4, "color": ["#22c55e", 0.45], "width": 4.0, "strength": 1}, {"a": 0, "b": 5, "color": ["#ef4444", 0.45], "width": 4.0, "strength": 1}, {"a": 0, "b": 6, "color": ["#ef4444", 0.45], "width": 2.28, "strength": 1}, {"a": 0, "b": 7, "color": ["#ef4444", 0.45], "width": 1.06, "strength": 1}, {"a": 0, "b": 8, "color": ["#22c55e", 0.45], "width": 1.16, "strength": 1}, {"a": 0, "b": 9, "color": ["#ef4444", 0.45], "width": 2.46, "strength": 1}, {"a": 0, "b": 10, "color": ["#22c55e", 0.45], "width": 2.32, "strength": 1}, {"a": 1, "b": 11, "color": ["#ef4444", 0.45], "width": 2.86, "strength": 1}, {"a": 1, "b": 12, "color": ["#ef4444", 0.45], "width": 3.03, "strength": 1}, {"a": 1, "b": 13, "color": ["#22c55e", 0.45], "width": 3.52, "strength": 1}, {"a": 1, "b": 14, "color": ["#ef4444", 0.45], "width": 3.43, "strength": 1}, {"a": 1, "b": 15, "color": ["#22c55e", 0.45], "width": 2.93, "strength": 1}]};
+const CENTER = 2048;
+function rgba(hex, a){ const n = parseInt(hex.slice(1), 16); return [((n>>16)&255)/255, ((n>>8)&255)/255, (n&255)/255, a]; }
+const N = DATA.nodes.length;
+const POS = new Float32Array(N*2), PC = new Float32Array(N*4), PS = new Float32Array(N), SC = new Float32Array(N*4), SW = new Float32Array(N);
+const LNK = [], LCOL = [], LWID = [], LSTR = [];
+const ADJ = DATA.nodes.map(()=>new Set());
+DATA.nodes.forEach((nd,i)=>{ POS[i*2]=nd.x; POS[i*2+1]=nd.y; PC.set(rgba(nd.color[0], nd.color[1]), i*4); PS[i]=nd.size; SC.set(rgba(nd.stroke[0], nd.stroke[1]), i*4); SW[i]=nd.strokeW; });
+DATA.links.forEach(L=>{ LNK.push(L.a, L.b); LCOL.push(...rgba(L.color[0], L.color[1])); LWID.push(L.width); LSTR.push(L.strength); ADJ[L.a].add(L.b); ADJ[L.b].add(L.a); });
+const basePC = PC.slice(), baseLC = Float32Array.from(LCOL), baseLW = Float32Array.from(LWID);
+let graph = null, hoverIdx = null;
+const labelEls = [], screenPos = new Array(N).fill(null);
+function buildLabels(){
+  const wrap = document.getElementById('labels');
+  DATA.nodes.forEach((nd,i)=>{
+    const el = document.createElement('div'); el.className = 'lab';
+    el.innerHTML = '<div class="t"></div><div class="s"></div>';
+    el.querySelector('.t').textContent = nd.label;
+    el.querySelector('.s').textContent = nd.sub || '';
+    el.style.display = 'none';
+    wrap.appendChild(el); labelEls[i] = el;
+  });
+}
+function setHover(idx){
+  if(idx === hoverIdx) return; hoverIdx = idx;
+  const tip = document.getElementById('tip');
+  if(!graph) return;
+  if(idx == null){
+    graph.setPointColors(basePC); graph.setLinkColors(baseLC); graph.setLinkWidths(baseLW);
+    tip.style.display = 'none';
+  }else{
+    const pc = basePC.slice(), lc = baseLC.slice(), lw = baseLW.slice();
+    for(let i=0;i<N;i++){ if(i !== idx && !ADJ[idx].has(i)){ pc[i*4+3] = basePC[i*4+3]*0.12; } }
+    for(let k=0;k<DATA.links.length;k++){
+      const L = DATA.links[k];
+      if(L.a === idx || L.b === idx){ lc[k*4+3] = Math.min(1, baseLC[k*4+3]*1.6 + 0.25); lw[k] = baseLW[k]*1.7; }
+      else { lc[k*4+3] = baseLC[k*4+3]*0.1; }
+    }
+    graph.setPointColors(pc); graph.setLinkColors(lc); graph.setLinkWidths(lw);
+    const nd = DATA.nodes[idx];
+    tip.innerHTML = '<div class="tt"></div>' + nd.tip.slice(1).map(t=>'<div></div>').join('');
+    tip.querySelector('.tt').textContent = nd.tip[0] || nd.label;
+    const rows = tip.querySelectorAll('div:not(.tt)');
+    nd.tip.slice(1).forEach((t,j)=>{ if(rows[j]) rows[j].textContent = t; });
+    tip.style.display = 'block';
+  }
+  try{ graph.render(undefined, 0); }catch(e){}
+}
+function labelLoop(){
+  requestAnimationFrame(labelLoop);
+  if(!graph) return;
+  let map = null;
+  try{ map = graph.getTrackedPointPositionsMap(); }catch(e){ return; }
+  if(!map || !map.size) return;
+  map.forEach((pos, idx)=>{
+    const el = labelEls[idx]; if(!el) return;
+    if(!pos || !isFinite(pos[0]) || !isFinite(pos[1])){ el.style.display = 'none'; screenPos[idx] = null; return; }
+    const sp = graph.spaceToScreenPosition(pos);
+    screenPos[idx] = sp;
+    el.style.display = '';
+    el.style.transform = 'translate(' + sp[0].toFixed(1) + 'px,' + sp[1].toFixed(1) + 'px) translate(-50%,-50%)';
+    if(idx === hoverIdx){
+      const tip = document.getElementById('tip');
+      tip.style.left = Math.min(window.innerWidth - 270, sp[0] + 18) + 'px';
+      tip.style.top = Math.max(8, sp[1] - 20) + 'px';
+    }
+  });
+}
+async function init(){
+  try{
+    const probe = document.createElement('canvas');
+    if(!probe.getContext('webgl2')) throw new Error('WebGL2 unavailable');
+    const mod = await Promise.race([
+      import('./cosmos.bundle.js'),
+      new Promise((_, rej)=>setTimeout(()=>rej(new Error('bundle timeout')), 15000))
+    ]);
+    if(!mod || !mod.Graph) throw new Error('Graph export missing');
+    const g = new mod.Graph(document.getElementById('cosmosDiv'), {
+      backgroundColor: '#0b0f14',
+      scalePointsOnZoom: false,
+      transitionDuration: 0,
+      randomSeed: 1234,
+      simulationGravity: 0.03,
+      simulationRepulsion: 0.9,
+      simulationLinkSpring: 1.0,
+      simulationLinkDistance: 300,
+      simulationLinkDistRandomVariationRange: [0.55, 1.45],
+      simulationFriction: 0.8,
+      simulationCollision: 1,
+      simulationCollisionPadding: 8,
+      simulationDecay: 100000,
+      fitViewOnInit: false,
+      curvedLinks: false,
+      linkDefaultArrows: false,
+      enableZoom: true,
+      enableDrag: true,
+      onPointMouseOver: (i)=>{ if(typeof i === 'number') setHover(i); },
+      onPointMouseOut: ()=>setHover(null)
+    });
+    graph = g;
+    await g.ready;
+    g.setPointPositions(POS, true);
+    g.setPointColors(PC); g.setPointSizes(PS);
+    g.setPointStrokeColors(SC); g.setPointStrokeWidths(SW);
+    g.setLinks(Float32Array.from(LNK)); g.setLinkColors(baseLC); g.setLinkWidths(baseLW); g.setLinkStrength(Float32Array.from(LSTR));
+    g.render(undefined, 0);
+    try{ g.trackPointPositionsByIndices(DATA.nodes.map((_,i)=>i)); }catch(e){}
+    try{ g.fitView(700, 0.14); }catch(e){}
+    buildLabels();
+    requestAnimationFrame(labelLoop);
+    document.getElementById('cnt').textContent = 'NODES ' + N + ' / LINKS ' + DATA.links.length;
+  }catch(e){
+    console.warn('cosmos unavailable:', e);
+    const n = document.getElementById('nogl'); n.style.display = 'grid';
+  }
+}
+init();
+
+</script>
+</body>
+</html>
