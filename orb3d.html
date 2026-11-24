@@ -3,42 +3,154 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>CRAWLER ORB 3D — Cosmograph サンプルの立体版</title>
+<title>QUANTUM ORB — PAPER DESK</title>
 <style>
-:root{--txt:#e2e8f0;--mut:#94a3b8;--line:rgba(148,163,184,.25)}
+:root{
+  --txt:#f1f5f9; --mut:#94a3b8; --dim:#64748b;
+  --rose:#f43f5e; --live:#ff2d55; --gold:#fbbf24; --cyan:#38bdf8;
+  --glass:rgba(10,12,22,.55); --glass-brd:rgba(255,255,255,.13);
+}
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;overflow:hidden;color:var(--txt);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:radial-gradient(1200px 800px at 70% 20%,#0d1530 0%,#05070f 45%,#02030a 100%)}
-#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+html,body{margin:0;height:100%;overflow:hidden;color:var(--txt);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#010103}
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab;z-index:0}
 #cv:active{cursor:grabbing}
+#vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 46%, rgba(0,0,0,0) 52%, rgba(0,0,0,.62) 100%),
+             linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,0) 18%, rgba(0,0,0,0) 82%, rgba(0,0,0,.45) 100%)}
 #labels{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:3}
-.lab{position:absolute;left:0;top:0;transform:translate(-50%,-130%);background:rgba(4,8,14,.82);border:1px solid rgba(148,163,184,.4);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;letter-spacing:.03em;white-space:nowrap;color:var(--txt);will-change:transform,opacity}
+.lab{position:absolute;left:0;top:0;background:rgba(3,6,12,.78);border:1px solid rgba(148,163,184,.38);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;letter-spacing:.03em;white-space:nowrap;color:var(--txt);will-change:transform,opacity;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .lab .d{font-weight:400;font-size:9.5px;color:#a5b4cc;margin-left:5px}
-.lab.held{border-color:rgba(251,191,36,.9);color:#fde68a;box-shadow:0 0 12px rgba(251,191,36,.45)}
-.lab.core{border-color:rgba(56,189,248,.8);color:#bae6fd}
-header{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:12px 16px;pointer-events:none}
-header .ttl{font-size:16px;font-weight:800;letter-spacing:.08em;text-shadow:0 0 14px rgba(56,189,248,.55)}
-header .ttl small{display:block;font-size:9.5px;font-weight:400;color:var(--mut);letter-spacing:.03em;margin-top:2px}
-header .cnt{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--mut);white-space:nowrap}
-#legend{position:fixed;left:12px;bottom:36px;z-index:5;background:rgba(8,12,22,.78);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:10.5px;line-height:1.75;max-width:300px;backdrop-filter:blur(3px)}
-#legend b{color:#7dd3fc;letter-spacing:.05em}
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 3px 0 6px;vertical-align:0;box-shadow:0 0 6px currentColor}
+.lab.held{border-color:rgba(251,191,36,.92);color:#fde68a;box-shadow:0 0 14px rgba(251,191,36,.5)}
+.lab.core{border-color:rgba(56,189,248,.85);color:#bae6fd;box-shadow:0 0 12px rgba(56,189,248,.35)}
+.lab.sel{border-color:#fff;color:#fff;box-shadow:0 0 14px rgba(255,255,255,.55)}
+.panel{position:fixed;z-index:6;background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;
+  backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);
+  box-shadow:0 10px 34px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.07);pointer-events:none}
+.caps{font-size:9px;letter-spacing:.22em;color:var(--dim);font-weight:700;text-transform:uppercase}
+#brand{top:14px;left:14px;padding:11px 15px 10px;max-width:min(360px,62vw)}
+#brand .ttl{font-size:19px;font-weight:900;letter-spacing:.1em;line-height:1.15;
+  background:linear-gradient(92deg,#fff 20%,#fda4af 55%,#f43f5e 85%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 12px rgba(244,63,94,.35))}
+#brand .sub{display:flex;align-items:center;gap:7px;margin-top:4px;font-size:10px;letter-spacing:.18em;color:#cbd5e1;font-weight:700}
+.livedot{width:8px;height:8px;border-radius:50%;background:var(--live);flex:none;animation:pulse 1.5s ease-out infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,45,85,.65)}70%{box-shadow:0 0 0 9px rgba(255,45,85,0)}100%{box-shadow:0 0 0 0 rgba(255,45,85,0)}}
+#brand .stamp{margin-top:6px;font-family:ui-monospace,Menlo,monospace;font-size:9.5px;color:var(--mut);letter-spacing:.02em}
+#verdict{top:14px;right:14px;padding:11px 14px 10px;width:218px}
+#verdict .counts{display:flex;gap:10px;margin-top:7px}
+#verdict .cntbox{flex:1;text-align:center;border:1px solid rgba(255,255,255,.09);border-radius:9px;padding:5px 0 4px;background:rgba(255,255,255,.03)}
+#verdict .n{font-size:17px;font-weight:900;line-height:1.1;font-family:ui-monospace,Menlo,monospace}
+#verdict .l{font-size:8.5px;letter-spacing:.16em;color:var(--mut);font-weight:700}
+#verdict .eq{margin-top:9px;font-family:ui-monospace,Menlo,monospace;font-size:14px;font-weight:700}
+#verdict .eq small{color:var(--mut);font-size:10.5px;font-weight:400}
+#verdict .heldline{margin-top:6px;font-size:10.5px;color:#fde68a;letter-spacing:.04em}
+#verdict .heldline b{color:var(--gold)}
+#legend{left:14px;bottom:48px;padding:9px 12px;font-size:10.5px;line-height:1.8;max-width:302px}
+#legend b{color:#7dd3fc;letter-spacing:.06em}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 3px 0 7px;vertical-align:0;box-shadow:0 0 7px currentColor}
 .dot:first-child{margin-left:0}
-footer{position:fixed;left:0;right:0;bottom:0;z-index:5;padding:6px 14px;font-size:10px;color:var(--mut);display:flex;justify-content:space-between;gap:8px;pointer-events:none}
-#hint{position:fixed;right:12px;bottom:36px;z-index:5;font-size:10px;color:var(--mut);background:rgba(8,12,22,.6);border:1px solid var(--line);border-radius:999px;padding:4px 10px;pointer-events:none}
-@media (max-width:700px){ #legend{max-width:58vw;font-size:9.5px;padding:7px 9px} header .ttl{font-size:13px} .lab{font-size:10px;padding:1px 7px} #hint{display:none} }
+#hint{position:fixed;right:14px;bottom:48px;z-index:6;font-size:10px;color:var(--mut);background:var(--glass);border:1px solid var(--glass-brd);border-radius:999px;padding:5px 11px;pointer-events:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#tape{position:fixed;left:0;right:0;bottom:0;height:34px;z-index:7;overflow:hidden;display:flex;align-items:center;
+  background:rgba(4,5,10,.78);border-top:1px solid rgba(244,63,94,.35);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#tape .tag{flex:none;height:100%;display:flex;align-items:center;padding:0 12px;background:linear-gradient(90deg,rgba(244,63,94,.32),rgba(244,63,94,.08));color:#fecdd3;font-size:9.5px;font-weight:800;letter-spacing:.2em;border-right:1px solid rgba(244,63,94,.35);z-index:2}
+#tapeTrack{display:flex;width:max-content;animation:tape 30s linear infinite;will-change:transform}
+#tape:hover #tapeTrack{animation-play-state:paused}
+@keyframes tape{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.titem{flex:none;display:flex;align-items:baseline;gap:6px;padding:0 18px;font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:nowrap}
+.titem .s{font-weight:800;color:#fff;letter-spacing:.05em}
+.titem .p{color:#cbd5e1}
+.titem .d{font-size:9px;font-weight:800;letter-spacing:.12em}
+#detail{position:fixed;z-index:8;right:14px;top:50%;transform:translateY(-50%) translateX(16px);width:248px;padding:14px 15px 12px;
+  background:rgba(8,10,18,.72);border:1px solid var(--glass-brd);border-radius:16px;opacity:0;pointer-events:none;
+  backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);
+  box-shadow:0 16px 44px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.08);transition:opacity .18s ease, transform .18s ease}
+#detail.show{opacity:1;pointer-events:auto;transform:translateY(-50%) translateX(0)}
+#detail .row1{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#dSym{font-size:22px;font-weight:900;letter-spacing:.06em}
+#dBadge{font-size:9.5px;font-weight:800;letter-spacing:.14em;border:1px solid;border-radius:999px;padding:3px 9px}
+#dClose{position:absolute;top:8px;right:10px;width:24px;height:24px;border:none;background:transparent;color:var(--mut);font-size:16px;cursor:pointer;line-height:1}
+#detail .grid{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px;margin-top:11px}
+#detail .k{font-size:8.5px;letter-spacing:.18em;color:var(--dim);font-weight:700}
+#detail .v{font-family:ui-monospace,Menlo,monospace;font-size:13.5px;font-weight:700;margin-top:1px}
+#dHeld{margin-top:11px;font-size:10.5px;color:#fde68a}
+@media (max-width:700px){
+  #brand{top:10px;left:10px;padding:8px 11px}
+  #brand .ttl{font-size:14px}
+  #brand .stamp{display:none}
+  #verdict{top:10px;right:10px;width:158px;padding:8px 10px}
+  #verdict .n{font-size:14px}
+  #verdict .eq{font-size:12px;margin-top:6px}
+  #verdict .heldline{font-size:9.5px}
+  #legend{left:10px;bottom:44px;max-width:56vw;font-size:9px;line-height:1.65;padding:7px 9px}
+  .lab{font-size:10px;padding:1px 7px}
+  #hint{display:none}
+  #detail{left:10px;right:10px;top:auto;bottom:44px;width:auto;transform:translateY(10px)}
+  #detail.show{transform:translateY(0)}
+}
 </style>
 </head>
 <body>
 <canvas id="cv"></canvas>
+<div id="vignette"></div>
 <div id="labels"></div>
-<header><div class="ttl">CRAWLER ORB 3D<small>銘柄ネットワークを立体オーブ化 · ドラッグで回転</small></div><div class="cnt" id="cnt"></div></header>
-<div id="legend"><b>凡例</b><br><span class="dot" style="background:#ef4444;color:#ef4444"></span>SHORT<span class="dot" style="background:#22c55e;color:#22c55e"></span>LONG<span class="dot" style="background:#94a3b8;color:#94a3b8"></span>HOLD<br>大きさ = シグナル強度（CHIEF系スコア）<br>金のリング＋強い発光 = 保有中ポジション<br>線の太さ・明るさ = 板の不均衡 |imbalance|<br>流れる光点 = CORE へのデータパケット</div>
-<div id="hint">ドラッグで回転 / 離すと自動回転に復帰</div>
-<footer><span id="stamp"></span><span>ペーパートレードのサンプル</span></footer>
+
+<div class="panel" id="brand">
+  <div class="ttl">QUANTUM ORB</div>
+  <div class="sub"><span class="livedot"></span>LIVE&nbsp;·&nbsp;PAPER DESK</div>
+  <div class="stamp" id="stamp"></div>
+</div>
+
+<div class="panel" id="verdict">
+  <div class="caps">Verdict · Run <span id="vRun"></span></div>
+  <div class="counts">
+    <div class="cntbox"><div class="n" style="color:#fb7185" id="cShort">–</div><div class="l">SHORT</div></div>
+    <div class="cntbox"><div class="n" style="color:#4ade80" id="cLong">–</div><div class="l">LONG</div></div>
+    <div class="cntbox"><div class="n" style="color:#cbd5e1" id="cHold">–</div><div class="l">HOLD</div></div>
+  </div>
+  <div class="eq">$627.61 <small>/ ¥99,834</small></div>
+  <div class="heldline">保有: <b>SKY SHORT</b> · 1件</div>
+</div>
+
+<div class="panel" id="legend"><b>凡例</b><br><span class="dot" style="background:#f43f5e;color:#f43f5e"></span>SHORT<span class="dot" style="background:#22c55e;color:#22c55e"></span>LONG<span class="dot" style="background:#94a3b8;color:#94a3b8"></span>HOLD<br>大きさ = シグナル強度（CHIEF系スコア）<br>金のリング＋強い発光 = 保有中ポジション<br>線の太さ・明るさ = 板の不均衡 |imbalance|<br>流れる光点 = CORE へのデータパケット<br>ノードをタップ = 詳細表示</div>
+<div id="hint">ドラッグで回転 / タップで詳細 / 離すと自動回転に復帰</div>
+
+<div id="detail">
+  <button id="dClose" aria-label="閉じる">×</button>
+  <div class="row1"><span id="dSym">—</span><span id="dBadge">—</span></div>
+  <div class="grid">
+    <div><div class="k">PRICE</div><div class="v" id="dPrice">—</div></div>
+    <div><div class="k">RSI</div><div class="v" id="dRsi">—</div></div>
+    <div><div class="k">CHIEF</div><div class="v" id="dChief">—</div></div>
+    <div><div class="k">CHIEF SHORT</div><div class="v" id="dChiefShort">—</div></div>
+    <div><div class="k">IMBALANCE</div><div class="v" id="dImb">—</div></div>
+    <div><div class="k">STRENGTH</div><div class="v" id="dStr">—</div></div>
+  </div>
+  <div id="dHeld"></div>
+</div>
+
+<div id="tape"><div class="tag">PAPER DESK</div><div id="tapeTrack"></div></div>
+
 <script>
 'use strict';
 /* ===== DATA (embedded from results.json at build time) ===== */
-const DATA = {"generated": "2026-11-22 11:17:09 JST", "run": 81, "heldCount": 6, "nodes": [{"sym": "UNI", "dec": "HOLD", "color": "#94a3b8", "chief": 0.639, "chiefShort": 0.582, "strength": 0.639, "held": false, "side": "", "price": 4.7109, "rsi": 59, "linkW": 2.62, "linkA": 0.54, "linkSrc": "imbalance 0.63"}, {"sym": "NEAR", "dec": "HOLD", "color": "#94a3b8", "chief": 0.632, "chiefShort": 0.566, "strength": 0.632, "held": true, "side": "short", "price": 2.8919, "rsi": 57, "linkW": 2.81, "linkA": 0.57, "linkSrc": "imbalance 0.69"}, {"sym": "ETH", "dec": "HOLD", "color": "#94a3b8", "chief": 0.617, "chiefShort": 0.554, "strength": 0.617, "held": true, "side": "short", "price": 1678.92, "rsi": 56, "linkW": 3.24, "linkA": 0.63, "linkSrc": "imbalance 0.82"}, {"sym": "XRP", "dec": "HOLD", "color": "#94a3b8", "chief": 0.614, "chiefShort": 0.56, "strength": 0.614, "held": false, "side": "", "price": 0.92825, "rsi": 56, "linkW": 2.78, "linkA": 0.56, "linkSrc": "imbalance 0.68"}, {"sym": "DOGE", "dec": "SHORT", "color": "#ef4444", "chief": 0.612, "chiefShort": 0.661, "strength": 0.661, "held": true, "side": "short", "price": 0.0549277, "rsi": 54, "linkW": 2.63, "linkA": 0.54, "linkSrc": "imbalance 0.64"}, {"sym": "XLM", "dec": "SHORT", "color": "#ef4444", "chief": 0.606, "chiefShort": 0.696, "strength": 0.696, "held": false, "side": "", "price": 0.128113, "rsi": 51, "linkW": 2.7, "linkA": 0.55, "linkSrc": "imbalance 0.66"}, {"sym": "LINK", "dec": "SHORT", "color": "#ef4444", "chief": 0.603, "chiefShort": 0.708, "strength": 0.708, "held": true, "side": "short", "price": 8.53594, "rsi": 52, "linkW": 2.59, "linkA": 0.53, "linkSrc": "imbalance 0.62"}, {"sym": "ADA", "dec": "SHORT", "color": "#ef4444", "chief": 0.596, "chiefShort": 0.628, "strength": 0.628, "held": false, "side": "", "price": 0.143375, "rsi": 53, "linkW": 2.59, "linkA": 0.53, "linkSrc": "imbalance 0.62"}, {"sym": "BTC", "dec": "HOLD", "color": "#94a3b8", "chief": 0.588, "chiefShort": 0.592, "strength": 0.592, "held": false, "side": "", "price": 59793.5, "rsi": 55, "linkW": 1.12, "linkA": 0.3, "linkSrc": "imbalance 0.16"}, {"sym": "CRV", "dec": "SHORT", "color": "#ef4444", "chief": 0.569, "chiefShort": 0.74, "strength": 0.74, "held": true, "side": "short", "price": 0.17721, "rsi": 51, "linkW": 3.37, "linkA": 0.65, "linkSrc": "imbalance 0.87"}, {"sym": "SKY", "dec": "SHORT", "color": "#ef4444", "chief": 0.501, "chiefShort": 0.637, "strength": 0.637, "held": true, "side": "short", "price": 0.04393, "rsi": 49, "linkW": 2.85, "linkA": 0.57, "linkSrc": "imbalance 0.70"}, {"sym": "AKE", "dec": "HOLD", "color": "#94a3b8", "chief": 0.187, "chiefShort": 0.732, "strength": 0.732, "held": false, "side": "", "price": 0.00410774, "rsi": 33, "linkW": 2.31, "linkA": 0.49, "linkSrc": "imbalance 0.53"}]};
+const DATA = {"generated":"2026-11-24 17:17:00 JST","run":182,"heldCount":1,"equity_usd":627.61,"equity_jpy":99834,"nodes":[
+{"sym":"SKY","dec":"SHORT","chief":0.483,"chiefShort":0.837,"strength":0.837,"held":true,"side":"short","price":0.03911,"rsi":42,"imbalance":0.685},
+{"sym":"NEAR","dec":"SHORT","chief":0.470,"chiefShort":0.694,"strength":0.694,"held":false,"side":"","price":3.0133,"rsi":50,"imbalance":0.65},
+{"sym":"LTC","dec":"SHORT","chief":0.457,"chiefShort":0.690,"strength":0.690,"held":false,"side":"","price":41.56,"rsi":53,"imbalance":0.598},
+{"sym":"ALGO","dec":"HOLD","chief":0.427,"chiefShort":0.665,"strength":0.665,"held":false,"side":"","price":0.07985,"rsi":46,"imbalance":0.681},
+{"sym":"XRP","dec":"SHORT","chief":0.423,"chiefShort":0.682,"strength":0.682,"held":false,"side":"","price":0.94472,"rsi":48,"imbalance":0.441},
+{"sym":"CRV","dec":"SHORT","chief":0.418,"chiefShort":0.711,"strength":0.711,"held":false,"side":"","price":0.17979,"rsi":45,"imbalance":0.798},
+{"sym":"ADA","dec":"SHORT","chief":0.412,"chiefShort":0.719,"strength":0.719,"held":false,"side":"","price":0.147815,"rsi":49,"imbalance":0.545},
+{"sym":"DOGE","dec":"SHORT","chief":0.404,"chiefShort":0.726,"strength":0.726,"held":false,"side":"","price":0.0561406,"rsi":48,"imbalance":0.376},
+{"sym":"ETH","dec":"HOLD","chief":0.382,"chiefShort":0.792,"strength":0.792,"held":false,"side":"","price":1695.37,"rsi":42,"imbalance":0.583},
+{"sym":"BTC","dec":"SHORT","chief":0.363,"chiefShort":0.814,"strength":0.814,"held":false,"side":"","price":60251.8,"rsi":41,"imbalance":0.504},
+{"sym":"AAVE","dec":"SHORT","chief":0.139,"chiefShort":0.877,"strength":0.877,"held":false,"side":"","price":95.45,"rsi":40,"imbalance":0.594}]};
+const DEC_COLORS = { SHORT: '#f43f5e', LONG: '#22c55e', HOLD: '#94a3b8' };
+DATA.nodes.forEach(nd => {
+  nd.color = DEC_COLORS[nd.dec] || '#94a3b8';
+  nd.linkW = 1 + nd.imbalance * 2.6;
+  nd.linkA = 0.25 + nd.imbalance * 0.45;
+});
 
 /* ===== Setup ===== */
 const cv = document.getElementById('cv');
@@ -59,7 +171,7 @@ function fmtPrice(p){
   return '$' + p.toPrecision(3);
 }
 
-/* ===== Pre-rendered glow / body sprites (per colour — no per-frame shadowBlur) ===== */
+/* ===== Pre-rendered glow / body / nebula sprites (no per-frame shadowBlur) ===== */
 function makeSprite(size, stops){
   const c = document.createElement('canvas'); c.width = size; c.height = size;
   const g = c.getContext('2d');
@@ -92,12 +204,17 @@ function spritesFor(hex){
 const bloomSprite = makeSprite(512, [
   [0.0, 'rgba(56,120,248,0.20)'], [0.4, 'rgba(80,80,220,0.10)'], [1.0, 'rgba(60,60,200,0)']
 ]);
+const NEBULAE = [
+  { spr: makeSprite(512, [[0.0,'rgba(37,99,235,0.34)'],[0.5,'rgba(37,99,235,0.13)'],[1.0,'rgba(37,99,235,0)']]), fx: -0.26, fy: -0.20, fs: 0.95, ph: 0.0, sp: 0.05 },
+  { spr: makeSprite(512, [[0.0,'rgba(139,92,246,0.30)'],[0.5,'rgba(124,58,237,0.11)'],[1.0,'rgba(124,58,237,0)']]), fx: 0.30, fy: 0.24, fs: 1.05, ph: 2.1, sp: 0.038 },
+  { spr: makeSprite(512, [[0.0,'rgba(244,63,94,0.24)'],[0.5,'rgba(244,63,94,0.09)'],[1.0,'rgba(244,63,94,0)']]), fx: 0.24, fy: -0.30, fs: 0.7, ph: 4.2, sp: 0.062 }
+];
 
 /* ===== Scene graph: fibonacci sphere ===== */
 const NCOINS = DATA.nodes.length;
 const GA = Math.PI * (3 - Math.sqrt(5));
 const nodes = [{ sym: 'CORE', dec: 'CORE', color: CORE_COLOR, core: true, held: false,
-                 strength: 1, x: 0, y: 0, z: 0, baseR: 30, linkW: 0, linkA: 0 }];
+                 strength: 1, x: 0, y: 0, z: 0, baseR: 30, linkW: 0, linkA: 0, imbalance: 0 }];
 DATA.nodes.forEach((nd, i) => {
   const y = NCOINS > 1 ? 1 - (i / (NCOINS - 1)) * 2 : 0;
   const rad = Math.sqrt(Math.max(0, 1 - y * y));
@@ -107,7 +224,7 @@ DATA.nodes.forEach((nd, i) => {
     sym: nd.sym, dec: nd.dec, color: nd.color, core: false,
     held: nd.held, side: nd.side, strength: nd.strength,
     chief: nd.chief, chiefShort: nd.chiefShort, price: nd.price, rsi: nd.rsi,
-    linkW: nd.linkW, linkA: nd.linkA,
+    imbalance: nd.imbalance, linkW: nd.linkW, linkA: nd.linkA,
     x: Math.cos(th) * rad * jr, y: y * jr, z: Math.sin(th) * rad * jr,
     baseR: Math.max(10, 11 + nd.strength * 13)
   });
@@ -121,7 +238,15 @@ const links = nodes.slice(1).map((nd, i) => ({
 let seed = 1234567;
 function rnd(){ seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
 const STARS = [];
-for (let i = 0; i < 190; i++) STARS.push({ x: rnd(), y: rnd(), r: 0.4 + rnd() * 1.3, ph: rnd() * 6.283, sp: 0.6 + rnd() * 1.8 });
+for (let i = 0; i < 210; i++) STARS.push({ x: rnd(), y: rnd(), r: 0.4 + rnd() * 1.3, ph: rnd() * 6.283, sp: 0.6 + rnd() * 1.8 });
+
+/* tilted orbit rings around the orb */
+const RINGS = [
+  { r: 1.24, tiltX: 1.15, tiltZ: 0.35, color: '#38bdf8', speed: 0.10, alpha: 0.30 },
+  { r: 1.34, tiltX: -0.55, tiltZ: -0.85, color: '#f43f5e', speed: -0.07, alpha: 0.26 },
+  { r: 1.44, tiltX: 0.45, tiltZ: 1.25, color: '#a78bfa', speed: 0.055, alpha: 0.22 }
+];
+RINGS.forEach(rg => { rg.cx = Math.cos(rg.tiltX); rg.sx = Math.sin(rg.tiltX); rg.cz = Math.cos(rg.tiltZ); rg.sz = Math.sin(rg.tiltZ); });
 
 /* ===== Labels ===== */
 const labelEls = nodes.map(nd => {
@@ -137,21 +262,63 @@ const labelEls = nodes.map(nd => {
 function labelPriority(nd){ return nd.core ? 1000 : (nd.held ? 500 : 0) + nd.strength * 100; }
 
 /* ===== Rotation / interaction state ===== */
-const state = { rotY: 0.6, rotX: 0.42, velY: 0, velX: 0, dragging: false, lastX: 0, lastY: 0, projected: [] };
+const state = { rotY: 0.6, rotX: 0.42, velY: 0, velX: 0, dragging: false, lastX: 0, lastY: 0, projected: [], selected: null };
 const AUTO_SPEED = 0.16; /* rad/s — slow continuous spin */
-function onDown(e){ state.dragging = true; state.lastX = e.clientX; state.lastY = e.clientY; state.velY = 0; state.velX = 0; try{ cv.setPointerCapture(e.pointerId); }catch(err){} }
+let downX = 0, downY = 0, downMoved = false;
+function onDown(e){ state.dragging = true; downMoved = false; downX = e.clientX; downY = e.clientY; state.lastX = e.clientX; state.lastY = e.clientY; state.velY = 0; state.velX = 0; try{ cv.setPointerCapture(e.pointerId); }catch(err){} }
 function onMove(e){
   if (!state.dragging) return;
+  if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) downMoved = true;
   const dx = e.clientX - state.lastX, dy = e.clientY - state.lastY;
   state.lastX = e.clientX; state.lastY = e.clientY;
   state.velY = dx * 0.005; state.velX = dy * 0.005;
   state.rotY += state.velY; state.rotX = clamp(state.rotX + state.velX, -0.5, 1.15);
 }
-function onUp(){ state.dragging = false; }
+function onUp(e){
+  const wasDrag = downMoved;
+  state.dragging = false;
+  if (!wasDrag && e && typeof e.clientX === 'number') tapAt(e.clientX, e.clientY);
+}
 cv.addEventListener('pointerdown', onDown);
 cv.addEventListener('pointermove', onMove);
 cv.addEventListener('pointerup', onUp);
-cv.addEventListener('pointercancel', onUp);
+cv.addEventListener('pointercancel', () => { state.dragging = false; });
+
+/* ===== Detail card ===== */
+const detailEl = document.getElementById('detail');
+function showDetail(nd){
+  state.selected = nd.sym;
+  document.getElementById('dSym').textContent = nd.sym;
+  const badge = document.getElementById('dBadge');
+  badge.textContent = nd.dec;
+  badge.style.color = nd.color; badge.style.borderColor = nd.color; badge.style.background = rgba(nd.color, 0.14);
+  document.getElementById('dPrice').textContent = fmtPrice(nd.price);
+  document.getElementById('dRsi').textContent = (nd.rsi == null ? '—' : nd.rsi);
+  document.getElementById('dChief').textContent = nd.chief.toFixed(3);
+  document.getElementById('dChiefShort').textContent = nd.chiefShort.toFixed(3);
+  document.getElementById('dImb').textContent = nd.imbalance.toFixed(3);
+  document.getElementById('dStr').textContent = nd.strength.toFixed(3);
+  document.getElementById('dHeld').textContent = nd.held ? ('★ 保有中 — ' + (nd.side ? nd.side.toUpperCase() : '') + ' ポジション') : '保有なし';
+  detailEl.classList.add('show');
+  labelEls.forEach((el, i) => { el.classList.toggle('sel', nodes[i].sym === nd.sym); });
+}
+function hideDetail(){
+  state.selected = null;
+  detailEl.classList.remove('show');
+  labelEls.forEach(el => el.classList.remove('sel'));
+}
+document.getElementById('dClose').addEventListener('click', hideDetail);
+function tapAt(px, py){
+  const frontFirst = state.projected.slice().sort((a, b) => a.z - b.z); /* front = smaller z */
+  for (let i = 0; i < frontFirst.length; i++){
+    const p = frontFirst[i];
+    if (p.nd.core) continue;
+    const R = Math.max(1.5, p.nd.baseR * p.s) + 10;
+    const dx = px - p.x, dy = py - p.y;
+    if (dx * dx + dy * dy <= R * R){ showDetail(p.nd); return; }
+  }
+  hideDetail();
+}
 
 /* ===== Resize ===== */
 function resize(){
@@ -167,11 +334,75 @@ function resize(){
 }
 if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', () => { resize(); kick(); });
 
-/* ===== Projection ===== */
+/* ===== Projection / rotation helpers ===== */
 const FOCAL = 3.4;
+const RC = { cy: 1, sy: 0, cx: 1, sx: 0 };
+function rotatePt(x, y, z){
+  const x1 = x * RC.cy + z * RC.sy;
+  const z1 = -x * RC.sy + z * RC.cy;
+  const y2 = y * RC.cx - z1 * RC.sx;
+  const z2 = y * RC.sx + z1 * RC.cx;
+  return [x1, y2, z2];
+}
 function project(x, y, z, cx, cy, orbR){
   const s = FOCAL / (FOCAL + z);
   return { x: cx + x * orbR * s, y: cy + y * orbR * s, s: s, z: z };
+}
+function strokeSpherePath(pts){
+  ctx.beginPath();
+  pts.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+  ctx.closePath(); ctx.stroke();
+}
+
+/* wireframe globe: lat/long lines rotating WITH the nodes */
+function drawWireframe(cx, cy, orbR){
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(103,232,249,0.075)';
+  const latDegs = [-50, -25, 0, 25, 50];
+  latDegs.forEach(ld => {
+    const la = ld * Math.PI / 180, yy = Math.sin(la), rr = Math.cos(la), pts = [];
+    for (let a = 0; a <= 360; a += 6){
+      const th = a * Math.PI / 180;
+      const r = rotatePt(Math.cos(th) * rr, yy, Math.sin(th) * rr);
+      pts.push(project(r[0], r[1], r[2], cx, cy, orbR));
+    }
+    strokeSpherePath(pts);
+  });
+  for (let lo = 0; lo < 180; lo += 30){
+    const lam = lo * Math.PI / 180, cl = Math.cos(lam), sl = Math.sin(lam), pts = [];
+    for (let b = 0; b <= 360; b += 6){
+      const ph = b * Math.PI / 180;
+      const r = rotatePt(Math.cos(ph) * cl, Math.sin(ph), Math.cos(ph) * sl);
+      pts.push(project(r[0], r[1], r[2], cx, cy, orbR));
+    }
+    strokeSpherePath(pts);
+  }
+}
+
+/* tilted glowing orbit rings */
+function drawRings(cx, cy, orbR, t){
+  RINGS.forEach((rg, ri) => {
+    const pts = [];
+    for (let a = 0; a <= 360; a += 5){
+      const th = a * Math.PI / 180 + t * rg.speed;
+      let x = Math.cos(th) * rg.r, y = 0, z = Math.sin(th) * rg.r;
+      const y1 = y * rg.cx - z * rg.sx, z1 = y * rg.sx + z * rg.cx; y = y1; z = z1;
+      const x2 = x * rg.cz - y * rg.sz, y2 = x * rg.sz + y * rg.cz; x = x2; y = y2;
+      const r = rotatePt(x, y, z);
+      pts.push(project(r[0], r[1], r[2], cx, cy, orbR));
+    }
+    ctx.save();
+    ctx.setLineDash([14, 18]);
+    ctx.lineDashOffset = -t * (24 + ri * 9);
+    ctx.beginPath();
+    pts.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+    ctx.closePath();
+    ctx.strokeStyle = rgba(rg.color, rg.alpha); ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.setLineDash([2, 26]);
+    ctx.lineDashOffset = -t * (24 + ri * 9) + 7;
+    ctx.strokeStyle = rgba(rg.color, rg.alpha + 0.3); ctx.lineWidth = 3; ctx.stroke();
+    ctx.restore();
+  });
 }
 
 /* ===== Paint ===== */
@@ -190,20 +421,32 @@ function paint(now){
     if (Math.abs(state.velY) < 0.0005) state.velY = 0;
     if (Math.abs(state.velX) < 0.0005) state.velX = 0;
   }
-  const cy1 = Math.cos(state.rotY), sy1 = Math.sin(state.rotY);
-  const cx1 = Math.cos(state.rotX), sx1 = Math.sin(state.rotX);
+  RC.cy = Math.cos(state.rotY); RC.sy = Math.sin(state.rotY);
+  RC.cx = Math.cos(state.rotX); RC.sx = Math.sin(state.rotX);
   const cx = W / 2, cy = H / 2 + 8;
   const orbR = Math.min(W, H) * 0.355;
 
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-  /* space background */
+  /* deep-black space background */
   if (!bgGrad || bgW !== W || bgH !== H){
     bgGrad = ctx.createRadialGradient(cx, cy * 0.85, 40, cx, cy, Math.max(W, H) * 0.75);
-    bgGrad.addColorStop(0, '#0a1128'); bgGrad.addColorStop(0.45, '#05070f'); bgGrad.addColorStop(1, '#02030a');
+    bgGrad.addColorStop(0, '#070a18'); bgGrad.addColorStop(0.45, '#03040a'); bgGrad.addColorStop(1, '#010103');
     bgW = W; bgH = H;
   }
   ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, W, H);
+
+  /* nebula blobs, slowly drifting */
+  NEBULAE.forEach(nb => {
+    const size = Math.max(W, H) * nb.fs;
+    const nx = cx + nb.fx * W + Math.sin(t * nb.sp + nb.ph) * 34;
+    const ny = cy + nb.fy * H + Math.cos(t * nb.sp * 0.8 + nb.ph) * 26;
+    ctx.globalAlpha = 0.85;
+    ctx.drawImage(nb.spr, nx - size / 2, ny - size / 2, size, size);
+  });
+  ctx.globalAlpha = 1;
+
+  /* starfield with twinkle */
   for (let i = 0; i < STARS.length; i++){
     const st = STARS[i];
     const tw = 0.35 + 0.65 * Math.abs(Math.sin(t * st.sp + st.ph));
@@ -221,22 +464,21 @@ function paint(now){
 
   /* rotate + project all nodes */
   const proj = nodes.map(nd => {
-    const x1 = nd.x * cy1 + nd.z * sy1;
-    const z1 = -nd.x * sy1 + nd.z * cy1;
-    const y2 = nd.y * cx1 - z1 * sx1;
-    const z2 = nd.y * sx1 + z1 * cx1;
-    const p = project(x1, y2, z2, cx, cy, orbR);
+    const r = rotatePt(nd.x, nd.y, nd.z);
+    const p = project(r[0], r[1], r[2], cx, cy, orbR);
     p.nd = nd;
-    p.front = clamp((1 - (z2 + 1.15) / 2.3), 0, 1); /* 1 = front */
+    p.front = clamp((1 - (r[2] + 1.15) / 2.3), 0, 1); /* 1 = front */
     return p;
   });
   state.projected = proj;
   const core = proj[0];
 
-  /* faint sphere shell */
+  /* wireframe globe + orbit rings + faint shell */
+  drawWireframe(cx, cy, orbR);
+  drawRings(cx, cy, orbR, t);
   ctx.strokeStyle = 'rgba(125,180,255,0.13)';
   ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.arc(cx, cy, orbR * (FOCAL / (FOCAL - 0)) * 0.99, 0, 6.2832); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, orbR * 0.99, 0, 6.2832); ctx.stroke();
 
   /* radar sweep (screen space, under nodes) */
   const sweepA = (t * 0.55) % 6.2832;
@@ -244,11 +486,11 @@ function paint(now){
   ctx.moveTo(cx, cy);
   ctx.arc(cx, cy, orbR * 0.99, sweepA - 0.38, sweepA);
   ctx.closePath();
-  ctx.fillStyle = 'rgba(56,189,248,0.05)'; ctx.fill();
+  ctx.fillStyle = 'rgba(244,63,94,0.045)'; ctx.fill();
   ctx.beginPath();
   ctx.moveTo(cx, cy);
   ctx.lineTo(cx + Math.cos(sweepA) * orbR * 0.99, cy + Math.sin(sweepA) * orbR * 0.99);
-  ctx.strokeStyle = 'rgba(56,189,248,0.30)'; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.strokeStyle = 'rgba(244,63,94,0.32)'; ctx.lineWidth = 1.2; ctx.stroke();
 
   /* links with a faint glow pass + core pass */
   links.forEach(L => {
@@ -325,6 +567,17 @@ function paint(now){
     ctx.drawImage(spr.body, p.x - R, p.y - R, R * 2, R * 2);
     ctx.globalAlpha = 1;
 
+    /* specular highlight dot */
+    if (R > 4){
+      const sxp = p.x - R * 0.36, syp = p.y - R * 0.40;
+      ctx.globalAlpha = 0.85 * nodeAlpha;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(sxp, syp, Math.max(0.7, R * 0.16), 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 0.35 * nodeAlpha;
+      ctx.beginPath(); ctx.arc(sxp, syp, Math.max(1.2, R * 0.30), 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
     /* depth shading for far side */
     if (!nd.core && p.front < 0.6){
       ctx.fillStyle = 'rgba(2,4,10,' + ((0.6 - p.front) * 0.55).toFixed(3) + ')';
@@ -334,6 +587,14 @@ function paint(now){
     if (nd.held){
       ctx.beginPath(); ctx.arc(p.x, p.y, R + 1.5, 0, 6.2832);
       ctx.strokeStyle = rgba(GOLD, 0.95 * nodeAlpha); ctx.lineWidth = 2.2; ctx.stroke();
+    }
+    /* selection ring */
+    if (state.selected && nd.sym === state.selected){
+      const sr = R + 6 + 1.6 * Math.sin(t * 4);
+      ctx.beginPath(); ctx.arc(p.x, p.y, sr, 0, 6.2832);
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.85 * nodeAlpha).toFixed(3) + ')'; ctx.lineWidth = 1.8; ctx.stroke();
+      ctx.beginPath(); ctx.arc(p.x, p.y, sr + 4, 0, 6.2832);
+      ctx.strokeStyle = rgba(nd.color, 0.45 * nodeAlpha); ctx.lineWidth = 1; ctx.stroke();
     }
   });
 
@@ -378,9 +639,26 @@ if (typeof document !== 'undefined' && document.addEventListener){
   document.addEventListener('visibilitychange', () => { if (!document.hidden) kick(); });
 }
 
-/* ===== Header / footer ===== */
-document.getElementById('cnt').textContent = 'NODES ' + nodes.length + ' / LINKS ' + links.length + ' · RUN ' + DATA.run;
-document.getElementById('stamp').textContent = 'データ: ' + DATA.generated + ' スキャン（results.json）';
+/* ===== HUD / ticker ===== */
+document.getElementById('stamp').textContent = 'SCAN ' + DATA.generated + ' · RUN ' + DATA.run + ' · NODES ' + nodes.length + ' / LINKS ' + links.length;
+document.getElementById('vRun').textContent = DATA.run;
+document.getElementById('cShort').textContent = DATA.nodes.filter(n => n.dec === 'SHORT').length;
+document.getElementById('cLong').textContent = DATA.nodes.filter(n => n.dec === 'LONG').length;
+document.getElementById('cHold').textContent = DATA.nodes.filter(n => n.dec === 'HOLD').length;
+(function buildTape(){
+  const track = document.getElementById('tapeTrack');
+  for (let copy = 0; copy < 2; copy++){
+    DATA.nodes.forEach(nd => {
+      const item = document.createElement('span'); item.className = 'titem';
+      const s = document.createElement('span'); s.className = 's'; s.textContent = nd.sym;
+      const p = document.createElement('span'); p.className = 'p'; p.textContent = fmtPrice(nd.price);
+      const d = document.createElement('span'); d.className = 'd'; d.textContent = nd.dec + (nd.held ? ' ★' : '');
+      d.style.color = nd.color;
+      item.appendChild(s); item.appendChild(p); item.appendChild(d);
+      track.appendChild(item);
+    });
+  }
+})();
 
 resize();
 kick();
