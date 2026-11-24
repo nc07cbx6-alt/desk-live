@@ -23,6 +23,7 @@ html,body{margin:0;height:100%;overflow:hidden;color:var(--txt);font-family:syst
 .lab.held{border-color:rgba(251,191,36,.92);color:#fde68a;box-shadow:0 0 14px rgba(251,191,36,.5)}
 .lab.core{border-color:rgba(56,189,248,.85);color:#bae6fd;box-shadow:0 0 12px rgba(56,189,248,.35)}
 .lab.sel{border-color:#fff;color:#fff;box-shadow:0 0 14px rgba(255,255,255,.55)}
+.blab{position:absolute;left:0;top:0;background:rgba(3,6,12,.62);border:1px solid;border-radius:999px;padding:0 5px;font-size:9px;font-weight:700;letter-spacing:.08em;white-space:nowrap;pointer-events:none;will-change:transform,opacity}
 .panel{position:fixed;z-index:6;background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;
   backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);
   box-shadow:0 10px 34px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.07);pointer-events:none}
@@ -111,7 +112,7 @@ html,body{margin:0;height:100%;overflow:hidden;color:var(--txt);font-family:syst
   <div class="heldline">保有: <b>SKY SHORT</b> · 1件</div>
 </div>
 
-<div class="panel" id="legend"><b>凡例</b><br><span class="dot" style="background:#f43f5e;color:#f43f5e"></span>SHORT<span class="dot" style="background:#22c55e;color:#22c55e"></span>LONG<span class="dot" style="background:#94a3b8;color:#94a3b8"></span>HOLD<br>大きさ = シグナル強度（CHIEF系スコア）<br>金のリング＋強い発光 = 保有中ポジション<br>線の太さ・明るさ = 板の不均衡 |imbalance|<br>流れる光点 = CORE へのデータパケット<br>ノードをタップ = 詳細表示</div>
+<div class="panel" id="legend"><b>凡例</b><br><span class="dot" style="background:#f43f5e;color:#f43f5e"></span>SHORT<span class="dot" style="background:#22c55e;color:#22c55e"></span>LONG<span class="dot" style="background:#94a3b8;color:#94a3b8"></span>HOLD<br>大きさ = シグナル強度（CHIEF系スコア）<br>金のリング＋強い発光 = 保有中ポジション<br>線の太さ・明るさ = 板の不均衡 |imbalance|<br>流れる光点 = CORE へのデータパケット<br>色つきの小さい光 = 巡回ボット（銘柄を見て回っています）<br>ノードをタップ = 詳細表示</div>
 <div id="hint">ドラッグで回転 / タップで詳細 / 離すと自動回転に復帰</div>
 
 <div id="detail">
@@ -248,6 +249,113 @@ const RINGS = [
 ];
 RINGS.forEach(rg => { rg.cx = Math.cos(rg.tiltX); rg.sx = Math.sin(rg.tiltX); rg.cz = Math.cos(rg.tiltZ); rg.sz = Math.sin(rg.tiltZ); });
 
+/* ===== Roaming agent bots (purely visual — no decision logic) ===== */
+const BOT_DEFS = [
+  { name: 'SCAN',    color: '#38bdf8' },
+  { name: 'VET',     color: '#a78bfa' },
+  { name: 'TECH',    color: '#34d399' },
+  { name: 'SOCIAL',  color: '#fbbf24' },
+  { name: 'PATTERN', color: '#f472b6' },
+  { name: 'GUARD',   color: '#f87171' },
+  { name: 'SHIELD',  color: '#60a5fa' },
+  { name: 'CHIEF',   color: '#e2e8f0' },
+  { name: 'FILLS',   color: '#4ade80' },
+  { name: 'RISK',    color: '#fb923c' }
+];
+const nodeFlash = nodes.map(() => 0); /* per-node arrival flash, 1 -> 0 decay */
+const HELD_IDX = nodes.findIndex(n => n.held);
+function pickBotTarget(bot){
+  if (Math.random() < 0.10) return 0; /* CORE gets occasional visits */
+  let total = 0;
+  for (let i = 1; i < nodes.length; i++) total += (i === HELD_IDX ? 3 : 1);
+  let r = Math.random() * total;
+  for (let i = 1; i < nodes.length; i++){
+    r -= (i === HELD_IDX ? 3 : 1);
+    if (r <= 0) return i;
+  }
+  return 1;
+}
+function nodePos(i){ const n = nodes[i]; return { x: n.x, y: n.y, z: n.z }; }
+function botStartLeg(bot, targetIdx){
+  bot.from = { x: bot.pos.x, y: bot.pos.y, z: bot.pos.z };
+  bot.target = targetIdx;
+  bot.to = nodePos(targetIdx);
+  const dx = bot.to.x - bot.from.x, dy = bot.to.y - bot.from.y, dz = bot.to.z - bot.from.z;
+  const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  bot.legDur = clamp(dist / bot.speed, 0.7, 4.0);
+  bot.legT = 0;
+  bot.mode = 'travel';
+}
+const bots = BOT_DEFS.map((def, bi) => {
+  const startIdx = 1 + (bi % (nodes.length - 1));
+  const bot = {
+    name: def.name, color: def.color, glow: spritesFor(def.color).glow,
+    pos: nodePos(startIdx), from: nodePos(startIdx), to: nodePos(startIdx),
+    target: startIdx, mode: 'inspect', legT: 0, legDur: 1,
+    inspectT: Math.random() * 0.8, inspectDur: 1 + Math.random() * 1.5,
+    speed: 0.45 + Math.random() * 0.45, wobPh: Math.random() * 6.283,
+    trail: [], proj: null
+  };
+  botStartLeg(bot, pickBotTarget(bot));
+  bot.legT = Math.random() * bot.legDur * 0.7; /* stagger departures */
+  return bot;
+});
+function updateBots(dt, t){
+  for (let i = 0; i < nodes.length; i++) if (nodeFlash[i] > 0) nodeFlash[i] = Math.max(0, nodeFlash[i] - dt * 0.9);
+  bots.forEach(bot => {
+    if (bot.mode === 'travel'){
+      bot.legT += dt;
+      const u = clamp(bot.legT / bot.legDur, 0, 1);
+      const e = u * u * (3 - 2 * u); /* smoothstep */
+      let px = bot.from.x + (bot.to.x - bot.from.x) * e;
+      let py = bot.from.y + (bot.to.y - bot.from.y) * e;
+      let pz = bot.from.z + (bot.to.z - bot.from.z) * e;
+      /* arc: bow the path outward away from the sphere centre */
+      const len = Math.sqrt(px * px + py * py + pz * pz);
+      if (len > 0.05){
+        const bulge = 1 + (Math.sin(u * Math.PI) * 0.30) / len;
+        px *= bulge; py *= bulge; pz *= bulge;
+      }
+      bot.pos.x = px; bot.pos.y = py; bot.pos.z = pz;
+      if (u >= 1){
+        nodeFlash[bot.target] = 1; /* arrival flash on the inspected node */
+        bot.mode = (bot.target === 0) ? 'corepause' : 'inspect';
+        bot.inspectT = 0;
+        bot.inspectDur = (bot.target === 0) ? 0.8 + Math.random() * 0.9 : 1 + Math.random() * 1.5;
+      }
+    } else {
+      /* inspect / corepause: small circular wobble around the target */
+      bot.inspectT += dt;
+      const tp = nodePos(bot.target);
+      if (bot.target === 0){
+        const wt = t * 1.6 + bot.wobPh;
+        bot.pos.x = Math.cos(wt) * 0.20; bot.pos.y = Math.sin(wt * 0.9) * 0.13; bot.pos.z = Math.sin(wt) * 0.20;
+      } else {
+        const nl = Math.sqrt(tp.x * tp.x + tp.y * tp.y + tp.z * tp.z) || 1;
+        const nx = tp.x / nl, ny = tp.y / nl, nz = tp.z / nl;
+        /* tangent basis around the node direction */
+        let tx = -nz, ty = 0, tz = nx;
+        const tl = Math.sqrt(tx * tx + tz * tz);
+        if (tl < 0.05){ tx = 1; ty = 0; tz = 0; } else { tx /= tl; tz /= tl; }
+        const ux = ny * tz - nz * ty, uy = nz * tx - nx * tz, uz = nx * ty - ny * tx;
+        const wt = t * 2.4 + bot.wobPh, wr = 0.075;
+        bot.pos.x = tp.x + (Math.cos(wt) * tx + Math.sin(wt) * ux) * wr;
+        bot.pos.y = tp.y + (Math.cos(wt) * ty + Math.sin(wt) * uy) * wr;
+        bot.pos.z = tp.z + (Math.cos(wt) * tz + Math.sin(wt) * uz) * wr;
+      }
+      if (bot.inspectT >= bot.inspectDur){
+        let next;
+        if (bot.target !== 0 && Math.random() < 0.12) next = 0; /* rare return to CORE, then scatter again */
+        else next = pickBotTarget(bot);
+        if (next === bot.target && nodes.length > 2) next = pickBotTarget(bot);
+        botStartLeg(bot, next);
+      }
+    }
+    bot.trail.push({ x: bot.pos.x, y: bot.pos.y, z: bot.pos.z });
+    if (bot.trail.length > 14) bot.trail.shift();
+  });
+}
+
 /* ===== Labels ===== */
 const labelEls = nodes.map(nd => {
   const el = document.createElement('div');
@@ -260,6 +368,17 @@ const labelEls = nodes.map(nd => {
   return el;
 });
 function labelPriority(nd){ return nd.core ? 1000 : (nd.held ? 500 : 0) + nd.strength * 100; }
+
+/* bot name labels: tiny, subtle, follow the bot when it is on the front side */
+const botLabelEls = bots.map(bot => {
+  const el = document.createElement('div');
+  el.className = 'blab';
+  el.textContent = bot.name;
+  el.style.borderColor = rgba(bot.color, 0.55);
+  el.style.color = bot.color;
+  labelWrap.appendChild(el);
+  return el;
+});
 
 /* ===== Rotation / interaction state ===== */
 const state = { rotY: 0.6, rotX: 0.42, velY: 0, velX: 0, dragging: false, lastX: 0, lastY: 0, projected: [], selected: null };
@@ -463,15 +582,25 @@ function paint(now){
   ctx.globalAlpha = 1;
 
   /* rotate + project all nodes */
-  const proj = nodes.map(nd => {
+  const proj = nodes.map((nd, ni) => {
     const r = rotatePt(nd.x, nd.y, nd.z);
     const p = project(r[0], r[1], r[2], cx, cy, orbR);
     p.nd = nd;
+    p.idx = ni;
     p.front = clamp((1 - (r[2] + 1.15) / 2.3), 0, 1); /* 1 = front */
     return p;
   });
   state.projected = proj;
   const core = proj[0];
+
+  /* roaming bots: advance behaviour, then project with the same rotation */
+  updateBots(dt, t);
+  bots.forEach(bot => {
+    const r = rotatePt(bot.pos.x, bot.pos.y, bot.pos.z);
+    const bp = project(r[0], r[1], r[2], cx, cy, orbR);
+    bp.front = clamp((1 - (r[2] + 1.15) / 2.3), 0, 1);
+    bot.proj = bp;
+  });
 
   /* wireframe globe + orbit rings + faint shell */
   drawWireframe(cx, cy, orbR);
@@ -527,6 +656,31 @@ function paint(now){
     });
   });
 
+  /* roaming bots: trails + glowing heads, far -> near, just under the nodes */
+  const botOrder = bots.filter(b => b.proj).slice().sort((a, b) => b.proj.z - a.proj.z);
+  botOrder.forEach(bot => {
+    const bp = bot.proj;
+    const depthA = 0.25 + 0.75 * bp.front;
+    for (let ti = 0; ti < bot.trail.length; ti++){
+      const tp3 = bot.trail[ti];
+      const frac = (ti + 1) / bot.trail.length; /* older = smaller / fainter */
+      const r = rotatePt(tp3.x, tp3.y, tp3.z);
+      const tp = project(r[0], r[1], r[2], cx, cy, orbR);
+      const sz = (3 + frac * 9) * bp.s;
+      ctx.globalAlpha = frac * 0.32 * depthA;
+      ctx.drawImage(bot.glow, tp.x - sz / 2, tp.y - sz / 2, sz, sz);
+    }
+    const gs = 30 * bp.s * (0.7 + 0.3 * bp.front);
+    ctx.globalAlpha = 0.9 * depthA;
+    ctx.drawImage(bot.glow, bp.x - gs / 2, bp.y - gs / 2, gs, gs);
+    ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(bp.x, bp.y, Math.max(1.4, 3.6 * bp.s), 0, 6.2832);
+    ctx.strokeStyle = rgba(bot.color, 0.85 * depthA); ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(bp.x, bp.y, Math.max(0.9, 2.3 * bp.s), 0, 6.2832); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
   /* nodes, far -> near (painter's sort) */
   const order = proj.slice().sort((a, b) => b.z - a.z);
   order.forEach(p => {
@@ -542,6 +696,20 @@ function paint(now){
     ctx.globalAlpha = (nd.core ? 0.95 : (0.35 + 0.65 * p.front) * (nd.held ? 1.0 : 0.8)) * nodeAlpha;
     ctx.drawImage(spr.glow, p.x - glowSize / 2, p.y - glowSize / 2, glowSize, glowSize);
     ctx.globalAlpha = 1;
+
+    /* bot arrival flash: brightness boost + expanding ring */
+    const fl = (p.idx != null) ? nodeFlash[p.idx] : 0;
+    if (fl > 0.01){
+      const fGlow = R * 2 * 4.6;
+      ctx.globalAlpha = fl * 0.55 * nodeAlpha;
+      ctx.drawImage(spr.glow, p.x - fGlow / 2, p.y - fGlow / 2, fGlow, fGlow);
+      ctx.globalAlpha = 1;
+      const fr = R * (1.3 + (1 - fl) * 1.9);
+      ctx.beginPath(); ctx.arc(p.x, p.y, fr, 0, 6.2832);
+      ctx.strokeStyle = rgba(nd.color, fl * 0.8 * nodeAlpha); ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.arc(p.x, p.y, fr * 0.72, 0, 6.2832);
+      ctx.strokeStyle = 'rgba(255,255,255,' + (fl * 0.5 * nodeAlpha).toFixed(3) + ')'; ctx.lineWidth = 1.2; ctx.stroke();
+    }
 
     /* held: expanding rings */
     if (nd.held){
@@ -623,6 +791,17 @@ function paint(now){
     el.style.transform = 'translate(' + bx.toFixed(1) + 'px,' + chosen.toFixed(1) + 'px)';
     el.style.opacity = p.nd.core ? '1' : (0.4 + 0.6 * p.front).toFixed(2);
   });
+
+  /* bot labels: just follow the bot, fade in only on the front side */
+  bots.forEach((bot, bi) => {
+    const el = botLabelEls[bi];
+    const bp = bot.proj;
+    if (!bp){ el.style.opacity = '0'; return; }
+    const lw = el.offsetWidth || 42, lh = el.offsetHeight || 14;
+    const bx = bp.x - lw / 2, by = bp.y - 15 * bp.s - lh;
+    el.style.transform = 'translate(' + bx.toFixed(1) + 'px,' + by.toFixed(1) + 'px)';
+    el.style.opacity = bp.front > 0.35 ? ((0.25 + 0.7 * bp.front) * 0.95).toFixed(2) : '0';
+  });
 }
 
 /* ===== Animation loop (robust: next frame scheduled BEFORE painting) ===== */
@@ -662,7 +841,7 @@ document.getElementById('cHold').textContent = DATA.nodes.filter(n => n.dec === 
 
 resize();
 kick();
-if (typeof window !== 'undefined') window.__orbState = state;
+if (typeof window !== 'undefined'){ window.__orbState = state; window.__orbBots = bots; }
 </script>
 </body>
 </html>
